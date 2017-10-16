@@ -358,49 +358,4 @@ static MV_API Vektor<Size, Type> Scale(Vektor<Size, Type> copy, const Vektor<Siz
 //////////////////////////////////////////////////////////
 
 
-//Returns vektor of target size (TS)
-template <UInt8 TS, typename Type, UInt8 VS>
-static MV_API Vektor<TS, Type> ToVek(const Vektor<VS, Type>& v, const Vektor<TS-VS, Type>* fill = nullptr)
-{
-    std::array<Type, TS> arr;
-    if MV_API (TS <= VS)
-    for(UInt8 i = 0u; i < TS; ++i)
-    arr[i] = v[i];
-    else
-    {
-        for (UInt8 i = 0u; i < VS; ++i)
-        arr[i] = v[i];
-        if (fill)
-        for(UInt8 i = 0u; i < (TS-VS); ++i)
-        arr[i + VS] = (*fill)[i];
-        else
-        for(UInt8 i = VS; i < TS; ++i)
-        arr[i] = static_cast<Type>(0);
-    }
-    return Vektor<TS, Type>(arr);
-}
-//////////////////////////////////////////////////////////
-
-
-template <UInt8 TS, typename Type, UInt8 VS>
-static MV_API Vektor<TS, Type> ToVek(const Vektor<VS, Type>& v, const Type arg)
-{
-    const Vektor<1u, Type> vt(arg);
-    return ToVek<TS>(v, &vt);
-}
-//////////////////////////////////////////////////////////
-
-
-template <UInt8 TS, typename Type, UInt8 VS, typename ... Args>
-static MV_API Vektor<TS, Type> ToVek(const Vektor<VS, Type>& v, Args...args)
-{
-    static_assert(sizeof...(Args) == (TS-VS), "ToVek: Invalid variadic pack size! Should be TS-VS");
-    //const std::array<Type, sizeof...(Args)> arr = { std::forward<Args>(args)... };
-    //const Vektor<sizeof...(Args)> vt(arr);
-    const Vektor<sizeof...(Args), Type> vt(std::forward<Args>(args)...);
-    return ToVek<TS>(v, &vt);
-}
-//////////////////////////////////////////////////////////
-
-
 #endif // MV_VF_HPP

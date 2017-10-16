@@ -80,15 +80,15 @@ namespace mv
         
         
         //Move ctor
-        MV_API Mat(Mat&& other) : __data(std::move(other._data))
+        MV_API Mat(Mat&& other) : __data(std::move(other.__data))
         {
-            
+            //__data = std::move(other.__data);
         }
         //////////////////////////////////////////////////////////
         
         
         //Copy-ctor
-        MV_API Mat(const Mat& other) : __data(other._data)
+        MV_API Mat(const Mat& other) : __data(other.__data)
         {
             
         }
@@ -96,12 +96,19 @@ namespace mv
         
         
         //Assignment
-        MV_API Mat& operator=(Mat other)
+        MV_API Mat& operator=(Mat&& other)
         {
-            swap(*this, other);
+            __data = other.__data;
+            // swap(*this, other);
             return *this;
         }
         //////////////////////////////////////////////////////////
+
+        MV_API Mat& operator=(const Mat& other)
+        {
+            __data = other.__data;
+            return *this;
+        }
         
         
         //Swap

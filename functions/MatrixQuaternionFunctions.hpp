@@ -28,7 +28,7 @@ static MV_API Mat<3u, 3u, Type> DerivativeOfQuaternionOperator(const Quat<Type>&
 {
     const Type t = static_cast<Type>(2);
     const Vektor<3u, Type> w(AngularRateVektor(q._v));
-    const Mat<3u, 3u, Type> T(ToMat3(q));
+    const Mat<3u, 3u, Type> T(ToMatrix(q));
     return Transpose(Mat<3u,3u,Type>(
         Cross(Vektor<3u, Type>(T.at(0, 0)*t, T.at(1, 0)*t, T.at(2, 0)*t), w),
         Cross(Vektor<3u, Type>(T.at(0, 1)*t, T.at(1, 1)*t, T.at(2, 1)*t), w),
@@ -41,7 +41,7 @@ static MV_API Mat<3u, 3u, Type> DerivativeOfQuaternionOperator(const Quat<Type>&
 
 //Converts quaternion to equivalent matrix
 template <typename Type>
-static MV_API Mat<3u, 3u, Type> ToMat3(const Quat<Type>& q)
+static MV_API Mat<3u, 3u, Type> ToMatrix(const Quat<Type>& q)
 {
     const Type o = static_cast<Type>(1);
     const Type t = static_cast<Type>(2);

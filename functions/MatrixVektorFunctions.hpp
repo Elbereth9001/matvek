@@ -20,6 +20,97 @@
 #ifndef MV_MVF_HPP
 #define MV_MVF_HPP
 
+
+
+template <UInt8 Rows, UInt8 Cols, typename Type, UInt16 Size>
+static MV_API Mat<Rows, Cols, Type> ToMatrix(const Vektor<Size, Type>& v)
+{
+    static_assert(
+        (Rows == 1u && Cols == Size) || (Cols == 1u && Rows == Size),
+        "ToMatrix: One matrix dimension must be 1, and the other must match Vektor size"
+    );
+    return Mat<Rows, Cols, Type>(v.data());
+}
+
+#if !MV_CONSTEXPR
+namespace detail
+{
+    template <bool, UInt8 Rows, UInt8 Cols, typename Type>
+    struct ToVektorHelper final
+    {
+        // Row by row
+        MV_DISABLE_CLASS(ToVektorHelper);
+        static Vektor<Rows * Cols, Type> ToVektor(const Mat<Rows, Cols, Type>& m)
+        {
+            std::array<Type, Rows * Cols> arr;
+            for (UInt8 i = 0u; i < Rows; ++i)
+            {
+                for (UInt8 j = 0u; j < Cols; ++i)
+                {
+                    arr[(i * Cols) + j] = m.at(i, j);
+                }
+            }
+            return Vektor<Rows * Cols, Type>(arr);
+        }
+    };
+    template <UInt8 Rows, UInt8 Cols, typename Type>
+    struct ToVektorHelper<false, Rows, Cols, Type> final
+    {
+        // Column by column
+        MV_DISABLE_CLASS(ToVektorHelper);
+        static Vektor<Rows * Cols, Type> ToVektor(const Mat<Rows, Cols, Type>& m)
+        {
+            std::array<Type, Rows * Cols> arr;
+            UInt16 index = 0u;
+            for (UInt8 j = 0u; j < Cols; ++j)
+            {
+                for (UInt8 i = 0u; i < Rows; ++i)
+                {
+                    arr[index] = m.at(i, j);
+                    ++index;
+                }
+            }
+            return Vektor<Rows * Cols, Type>(arr);
+        }
+    };
+} // detail
+#endif // !MV_CONSTEXPR ToVektorHelper
+
+template <bool FlattenByRow, UInt8 Rows, UInt8 Cols, typename Type>
+static MV_API Vektor<Rows * Cols, Type> ToVektor(const Mat<Rows, Cols, Type>& m)
+{
+    #if MV_CONSTEXPR
+    std::array<Type, Rows * Cols> arr;
+    if MV_API (FlattenByRow) // Row by row
+    {
+        for (UInt8 i = 0u; i < Rows; ++i)
+        {
+            for (UInt8 j = 0u; j < Cols; ++i)
+            {
+                arr[(i * Cols) + j] = m.at(i, j);
+            }
+        }
+    }
+    else // Column by column
+    {
+        UInt16 index = 0u;
+        for (UInt8 j = 0u; j < Cols; ++j)
+        {
+            for (UInt8 i = 0u; i < Rows; ++i)
+            {
+                arr[index] = m.at(i, j);
+                ++index;
+            }
+        }
+    }
+    return Vektor<Rows * Cols, Type>(arr);
+    #else
+    return detail::ToVektorHelper<FlattenByRow, Rows, Cols, Type>::ToVektor(m);
+    #endif
+}
+
+
+
 //Cross product between Mat3 and Vek3
 template <typename Type>
 static MV_API Mat<3u, 3u, Type> Cross(const Mat<3u, 3u, Type>& m, const Vektor<3u, Type>& v)
@@ -278,19 +369,21 @@ static MV_API Mat<4u, 4u, Type> MakeTranslation4(const Vektor<3, Type>& v)
 
 
 //Multiply matrix and vektor
-template <UInt8 Rows, UInt16 Size, typename Type>
-static MV_API Mat<Rows, 1u, Type> Multiply(const Mat<Rows, (UInt8)Size, Type>& m, const Vektor<Size, Type>& v)
+template <UInt8 Rows, UInt8 Cols, typename Type,  UInt16 Size>
+static MV_API Mat<Rows, 1u, Type> Multiply(const Mat<Rows, Cols, Type>& m, const Vektor<Size, Type>& v)
 {
-    return Multiply(m, ToMatrix(v));
+    static_assert(Cols == Size, "Matrix size mismatch");
+    return Multiply(m, ToMatrix<Rows, 1u>(v));
 }
 //////////////////////////////////////////////////////////
 
 
 //Multiply vektor and matrix
-template <UInt8 Cols, UInt16 Size, typename Type>
-static MV_API Mat<1u, Cols, Type> Multiply(const Vektor<Size, Type>& v, const Mat<(UInt8)Size, Cols, Type>& m)
+template <UInt8 Rows, UInt8 Cols, typename Type, UInt16 Size>
+static MV_API Mat<1u, Cols, Type> Multiply(const Vektor<Size, Type>& v, const Mat<Rows, Cols, Type>& m)
 {
-    return Multiply(ToMatH(v), m);
+    static_assert(Rows == Size, "Matrix size mismatch");
+    return Multiply(ToMatrix<1u, Rows>(v), m);
 }
 //////////////////////////////////////////////////////////
 
@@ -325,148 +418,11 @@ static MV_API Mat<3u, 3u, Type> Tilde(const Vektor<3u, Type>& v)
 //////////////////////////////////////////////////////////
 
 
-//Construct mat34 from mat3 and an optional vek3
-template <typename Type>
-static MV_API Mat<3u, 4u, Type> ToMat34(const Mat<3u, 3u, Type>& m, const Vektor<3u, Type>& v = Vektor<3u, Type>())
-{
-    return Mat<3u, 4u, Type>(
-        m[0], m[1], m[2], v[0],
-        m[3], m[4], m[5], v[1],
-        m[6], m[7], m[8], v[2]
-    );
-}
-//////////////////////////////////////////////////////////
-
-
-//Construct mat4 from mat3 and an optional vek3
-template <typename Type>
-static MV_API Mat<4u, 4u, Type> ToMat4(const Mat<3u, 3u, Type>& m, const Vektor<3u, Type>& v = Vektor<3u, Type>())
-{
-    const Type z = static_cast<Type>(0);
-    return Mat<4u, 4u, Type>(
-        m[0], m[1], m[2], v[0],
-        m[3], m[4], m[5], v[1],
-        m[6], m[7], m[8], v[2],
-        z, z, z, static_cast<Type>(1)
-    );
-}
-//////////////////////////////////////////////////////////
-
-
-//Returns horizontal matrix
-template <UInt8 Size, typename Type>
-static Mat<1u, Size, Type> ToMatH(const Vektor<Size, Type>& v)
-{
-    return Mat<1u, Size, Type>(v.data());
-}
-//////////////////////////////////////////////////////////
-
-
-//Returns vertical matrix
-template <UInt8 Size, typename Type>
-static MV_API Mat<Size, 1u, Type> ToMatV(const Vektor<Size, Type>& v)
-{
-    return Mat<Size, 1u, Type>(v.data());
-}
-//////////////////////////////////////////////////////////
-
-
-template <UInt8 MS, typename Type, UInt8 TS = MS>
-static MV_API Vektor<TS, Type> ToVek(const Mat<1u, MS, Type>& m)
-{
-    return ToVek<TS, Type>(Vektor<MS, Type>(m.data()));
-}
-template <UInt8 MS, typename Type, UInt8 TS = MS>
-static MV_API Vektor<TS, Type> ToVek(const Mat<MS, 1u, Type>& m)
-{
-    return ToVek<TS, Type>(Vektor<MS, Type>(m.data()));
-}
-//////////////////////////////////////////////////////////
-
-
-#if !MV_CONSTEXPR
-namespace detail
-{
-    template <bool, UInt8 Rows, UInt8 Cols, typename Type>
-    struct ToVektorHelper final
-    {
-        // Row by row
-        MV_DISABLE_CLASS(ToVektorHelper);
-        static Vektor<Rows * Cols, Type> ToVektor(const Mat<Rows, Cols, Type>& m)
-        {
-            std::array<Type, Rows * Cols> arr;
-            for (UInt8 i = 0u; i < Rows; ++i)
-            {
-                for (UInt8 j = 0u; j < Cols; ++i)
-                {
-                    arr[(i * Cols) + j] = m.at(i, j);
-                }
-            }
-            return Vektor<Rows * Cols, Type>(arr);
-        }
-    };
-    template <UInt8 Rows, UInt8 Cols, typename Type>
-    struct ToVektorHelper<false, Rows, Cols, Type> final
-    {
-        // Column by column
-        MV_DISABLE_CLASS(ToVektorHelper);
-        static Vektor<Rows * Cols, Type> ToVektor(const Mat<Rows, Cols, Type>& m)
-        {
-            std::array<Type, Rows * Cols> arr;
-            UInt16 index = 0u;
-            for (UInt8 j = 0u; j < Cols; ++j)
-            {
-                for (UInt8 i = 0u; i < Rows; ++i)
-                {
-                    arr[index] = m.at(i, j);
-                    ++index;
-                }
-            }
-            return Vektor<Rows * Cols, Type>(arr);
-        }
-    };
-} // detail
-#endif // !MV_CONSTEXPR ToVektorHelper
-
-template <bool FlattenByRow, UInt8 Rows, UInt8 Cols, typename Type>
-static MV_API Vektor<Rows * Cols, Type> ToVektor(const Mat<Rows, Cols, Type>& m)
-{
-    #if MV_CONSTEXPR
-    std::array<Type, Rows * Cols> arr;
-    if MV_API (FlattenByRow) // Row by row
-    {
-        for (UInt8 i = 0u; i < Rows; ++i)
-        {
-            for (UInt8 j = 0u; j < Cols; ++i)
-            {
-                arr[(i * Cols) + j] = m.at(i, j);
-            }
-        }
-    }
-    else // Column by column
-    {
-        UInt16 index = 0u;
-        for (UInt8 j = 0u; j < Cols; ++j)
-        {
-            for (UInt8 i = 0u; i < Rows; ++i)
-            {
-                arr[index] = m.at(i, j);
-                ++index;
-            }
-        }
-    }
-    return Vektor<Rows * Cols, Type>(arr);
-    #else
-    return detail::ToVektorHelper<FlattenByRow, Rows, Cols, Type>::ToVektor(m);
-    #endif
-}
-
-
 #if MV_EXPERIMENTAL
 template <typename Type>
 static MV_API Vektor<4u, Type> TransformDirection(const Mat<4u, 4u, Type>& m, const Vektor<4u, Type>& v)
 {
-    return ToVek(Multiply(m, v));
+    return ToVektor(Multiply(m, v));
 }
 //////////////////////////////////////////////////////////
 #endif
