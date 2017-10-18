@@ -20,27 +20,107 @@
 #ifndef MV_MF_HPP
 #define MV_MF_HPP
 
+#if MV_CONSTEXPR
+
+namespace detail
+{
+    template <
+    UInt8, UInt8,
+    typename,
+    UInt8, UInt8
+    >
+    struct ResizeMatrixHelper final { };
+    
+    template <
+    UInt8 NewRows, UInt8 NewCols,
+    typename Type,
+    UInt8 OldRows, UInt8 OldCols,
+    typename std::enable_if<NewRows == OldRows>::type* = nullptr
+    >
+    struct ResizeMatrixHelper final
+    {
+        static Mat<NewRows, NewCols, Type> ResizeMatrix(const Mat<OldRows, OldCols, Type>& m)
+        {
+            return m;
+        }
+    };
+    
+    // Square smaller
+    template <
+    UInt8 NewRows, UInt8 NewCols,
+    typename Type,
+    UInt8 OldRows, UInt8 OldCols,
+    typename std::enable_if<NewRows < OldRows>::type* = nullptr
+    >
+    struct ResizeMatrixHelper final
+    {
+        static Mat<NewRows, NewCols, Type> ResizeMatrix(const Mat<OldRows, OldCols, Type>& m)
+        {
+            std::array<Type, NewRows * NewCols> arr{};
+            for (UInt8 i = 0u; i < NewRows; ++i)
+            {
+                for (UInt8 j = 0u; j < NewCols; ++j)
+                {
+                    arr[(i * NewCols) + j] = m.at(i, j);
+                }
+            }
+            return Mat<NewRows, NewCols, Type>(arr);
+        }
+    };
+    
+    
+    // Square larger
+    template <
+    UInt8 NewRows, UInt8 NewCols,
+    typename Type,
+    UInt8 OldRows, UInt8 OldCols,
+    typename std::enable_if<NewRows > OldRows>::type* = nullptr
+    >
+    struct ResizeMatrixHelper final
+    {
+        static Mat<NewRows, NewCols, Type> ResizeMatrix(const Mat<OldRows, OldCols, Type>& m)
+        {
+            std::array<Type, NewRows * NewCols> arr;
+            for (UInt8 i = 0u; i < NewRows; ++i)
+            {
+                for (UInt8 j = 0u; j < NewCols; ++j)
+                {
+                    arr[(i * NewCols) + j] = (
+                        (i < OldRows && j < OldCols) ? m.at(i, j) :
+                        (i == j) ? static_cast<Type>(1) :
+                        static_cast<Type>(0)
+                    );
+                }
+            }
+            return Mat<NewRows, NewCols, Type>(arr);
+        }
+    };
+    
+} // detail
+
+#endif // MV_CONSTEXPR
 
 template <
-    UInt8 NewRows, UInt8 NewCols,
-    bool SetDiagonalOnes, typename Type,
-    UInt8 OldRows, UInt8 OldCols,
-    typename std::enable_if<OldRows != NewRows && OldCols != NewCols>::type* = nullptr
+UInt8 NewRows, UInt8 NewCols,
+typename Type,
+UInt8 OldRows, UInt8 OldCols,
+typename std::enable_if<OldRows != NewRows && OldCols != NewCols>::type* = nullptr
 >
 static MV_API Mat<NewRows, NewCols, Type> ResizeMatrix(const Mat<OldRows, OldCols, Type>& m)
 {
+    static_assert(
+        NewRows == NewCols && OldRows == OldCols,
+        "Only square matrices supported are currently supported for resizing"
+    );
     
-    static_assert(NewRows == NewCols, "Only square matrices supported are currently supported for resizing");
-    static_assert(OldRows == OldCols, "Only square matrices supported are currently supported for resizing");
+    static_assert(NewRows > 0u && NewCols > 0u, "Cannot resize matrix to zero");
+    static_assert(OldRows > 0u && OldCols > 0u, "Cannot resize a matrix with 0 elements");
     
-    static_assert(NewRows > 0u, "Cannot resize matrix to zero");
-    static_assert(NewCols > 0u, "Cannot resize matrix to zero");
-    static_assert(OldRows > 0u, "Cannot resize a matrix with 0 elements");
-    static_assert(OldCols > 0u, "Cannot resize a matrix with 0 elements");
-    //if MV_API ((NewRows == OldRows) && (NewCols == OldCols))
-    //{
-    //    return m;
-    //}
+    #if MV_CONSTEXPR
+    if MV_API ((NewRows == OldRows) && (NewCols == OldCols))
+    {
+        return m;
+    }
     if MV_API (NewRows == NewCols && OldRows == OldCols && NewRows < OldRows)
     {
         // square smaller
@@ -64,7 +144,7 @@ static MV_API Mat<NewRows, NewCols, Type> ResizeMatrix(const Mat<OldRows, OldCol
             {
                 arr[(i * NewCols) + j] = (
                     (i < OldRows && j < OldCols) ? m.at(i, j) :
-                    (SetDiagonalOnes && i == j) ? static_cast<Type>(1) :
+                    (i == j) ? static_cast<Type>(1) :
                     static_cast<Type>(0)
                 );
             }
@@ -72,7 +152,9 @@ static MV_API Mat<NewRows, NewCols, Type> ResizeMatrix(const Mat<OldRows, OldCol
         return Mat<NewRows, NewCols, Type>(arr);
     }
     // TODO: non-square matrices
-    return Mat<NewRows, NewCols, Type>();
+    #else
+    ResizeMatrixHelper<NewRows, NewCols>(m);
+    #endif
 }
 
 template <UInt8 NewRows, UInt8 NewCols, bool, typename Type>
@@ -303,39 +385,39 @@ static MV_API Mat<Size, Size, Type> MakeRotationSingle(const Type rad, const AXI
 {
     using math::Cos;
     using math::Sin;
-
+    
     const Type z = static_cast<Type>(0);
     const Type o = static_cast<Type>(1);
-
+    
     Mat<3u, 3u, Type> rot{};
-
+    
     switch (axis)
     {
         case mv::AXIS::X:
-            rot = Mat<3u, 3u, Type>(
-                o, z, z,
-                z, Cos(rad), -Sin(rad),
-                z, Sin(rad), Cos(rad)
-            );
-            break;
+        rot = Mat<3u, 3u, Type>(
+            o, z, z,
+            z, Cos(rad), -Sin(rad),
+            z, Sin(rad), Cos(rad)
+        );
+        break;
         case mv::AXIS::Y:
-            rot = Mat<3u, 3u, Type>(
-                Cos(rad), z, Sin(rad),
-                z, o, z,
-                -Sin(rad), z, Cos(rad)
-            );
-            break;
+        rot = Mat<3u, 3u, Type>(
+            Cos(rad), z, Sin(rad),
+            z, o, z,
+            -Sin(rad), z, Cos(rad)
+        );
+        break;
         case mv::AXIS::Z:
-            rot = Mat<3u, 3u, Type>(
-                Cos(rad), -Sin(rad), z,
-                Sin(rad), Cos(rad), z,
-                z, z, o
-            );
-            break;
+        rot = Mat<3u, 3u, Type>(
+            Cos(rad), -Sin(rad), z,
+            Sin(rad), Cos(rad), z,
+            z, z, o
+        );
+        break;
         default:
         MV_ASSERT(false, "Invalid rotation axis");
     }
-
+    
     return ResizeMatrix<Size, Size, true, Type>(rot);
 }
 
