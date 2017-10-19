@@ -296,32 +296,22 @@ static MV_API Mat<3u, 3u, Type> MakeRotationM(const Vektor<3u, Type>& v, const T
 //////////////////////////////////////////////////////////
 
 
-template <typename Type>
-static MV_API Mat<3u, 3u, Type> MakeScaling3(const Vektor<2u, Type>& s)
+template <UInt16 Size, typename Type>
+static MV_API Mat<Size + 1u, Size + 1, Type> MakeScaling(const Vektor<Size, Type>& scaling)
 {
-    const Type z = static_cast<Type>(0);
-    return Mat<3u, 3u, Type>(
-        s[0], z, z,
-        z, s[1], z,
-        z, z, static_cast<Type>(1)
-    );
+    static_assert(Size < 254u, "MakeScaling: Tried to create too large scaling matrix");
+    std::array<Type, (Size + 1u) * (Size + 1u)> arr{};
+    for (UInt8 i = 0u; i < (Size + 1u); ++i)
+    {
+        for (UInt8 j = 0u; j < (Size + 1u); ++j)
+        {
+            arr[(i * (Size + 1u)) + j] = ((i == j) ? scaling[i] : static_cast<Type>(0));
+        }
+    }
+    arr[((Size + 1u) * (Size + 1u))  - 1u] = static_cast<Type>(1);
+    return Mat<Size + 1u, Size + 1u, Type>(arr);
 }
 //////////////////////////////////////////////////////////
-
-
-template <typename Type>
-static MV_API Mat<4u, 4u, Type> MakeScaling4(const Vektor<3u, Type>& s)
-{
-    const Type z = static_cast<Type>(0);
-    return Mat<4u, 4u, Type>(
-        s[0], z, z, z,
-        z, s[1], z, z,
-        z, z, s[2], z,
-        z, z, z, static_cast<Type>(1)
-    );
-}
-//////////////////////////////////////////////////////////
-
 
 template <typename Type>
 static MV_API Mat<4u, 4u, Type> MakeScalingViaPoint(const Vektor<3u, Type>& s, const Vektor<3u, Type>& p)
@@ -337,33 +327,23 @@ static MV_API Mat<4u, 4u, Type> MakeScalingViaPoint(const Vektor<3u, Type>& s, c
 //////////////////////////////////////////////////////////
 
 
-//Returns translation matrix3
-template <typename Type>
-static MV_API Mat<3u, 3u, Type> MakeTranslation3(const Vektor<2, Type>& v)
+template <UInt16 Size, typename Type>
+static MV_API Mat<Size + 1u, Size + 1u, Type> MakeTranslation(const Vektor<Size, Type>& translation)
 {
-    const Type z = static_cast<Type>(0);
-    const Type o = static_cast<Type>(1);
-    return Mat<3u, 3u, Type>(
-        o, z, v[0],
-        z, o, v[1],
-        z, z, o
-    );
-}
-//////////////////////////////////////////////////////////
-
-
-//Returns translation matrix4
-template <typename Type>
-static MV_API Mat<4u, 4u, Type> MakeTranslation4(const Vektor<3, Type>& v)
-{
-    const Type z = static_cast<Type>(0);
-    const Type o = static_cast<Type>(1);
-    return Mat<4u, 4u, Type>(
-        o, z, z, v[0],
-        z, o, z, v[1],
-        z, z, o, v[2],
-        z, z, z, o
-    );
+    static_assert(Size < 254u, "MakeTranslation: Tried to create too large translation matrix");
+    std::array<Type, (Size + 1u) * (Size + 1u)> arr{};
+    for (UInt8 i = 0u; i < (Size + 1u); ++i)
+    {
+        for (UInt8 j = 0u; j < (Size + 1u); ++j)
+        {
+            arr[(i * (Size + 1u)) + j] = static_cast<Type>((i == j) ? 1 : 0);
+        }
+    }
+    for (UInt16 i = 0u; i < Size; ++i)
+    {
+        arr[(Size * (Size + 1u)) + i] = translation[i];
+    }
+    return Mat<Size + 1u, Size + 1u, Type>(arr);
 }
 //////////////////////////////////////////////////////////
 

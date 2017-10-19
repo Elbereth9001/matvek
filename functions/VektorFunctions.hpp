@@ -341,10 +341,9 @@ static MV_API Vektor<NewSize, Type> ResizeVektor(const Vektor<OldSize, Type>& v)
 
 
 template <UInt16 Size, typename Type>
-static MV_API Vektor<Size, Type> Reverse(Vektor<Size, Type> copy)
+static MV_API Vektor<Size, Type> Invert(Vektor<Size, Type> copy)
 {
-    static_assert(std::numeric_limits<Type>::is_signed, "Tried to call reverse on Vektor of unsigned type");
-    copy.reverse();
+    copy.invert();
     return copy;
 }
 //////////////////////////////////////////////////////////

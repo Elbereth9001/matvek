@@ -354,7 +354,7 @@ static MV_API Mat<4u, 4u, Type> MakePerspective(const Type fovRad, const Type as
 
 
 template <UInt8 Size, typename Type>
-static MV_API Mat<Size, Size, Type> MakeRotationSingle(const Type rad, const AXIS axis)
+static MV_API Mat<Size, Size, Type> MakeRotation(const Type rad, const AXIS axis)
 {
     using math::Cos;
     using math::Sin;
@@ -391,7 +391,7 @@ static MV_API Mat<Size, Size, Type> MakeRotationSingle(const Type rad, const AXI
         MV_ASSERT(false, "Invalid rotation axis");
     }
     
-    return ResizeMatrix<Size, Size, true, Type>(rot);
+    return ResizeMatrix<Size, Size>(rot);
 }
 //////////////////////////////////////////////////////////
 

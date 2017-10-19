@@ -20,7 +20,7 @@
 #ifndef MV_MATRIX_HPP
 #define MV_MATRIX_HPP
 
-#include "../functions/Utilities.hpp"
+#include "../utilities/Utilities.hpp"
 
 namespace mv
 {
@@ -140,7 +140,7 @@ namespace mv
         
         
         //Return number of elements in matrix
-        MV_API UInt32 size() const
+        MV_API UInt16 size() const
         {
             return Rows * Columns;
         }

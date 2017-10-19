@@ -20,6 +20,8 @@
 #ifndef MV_UTILITIES_HPP
 #define MV_UTILITIES_HPP
 
+#include "Types.hpp"
+
 #include <array>
 #include <cmath>
 //#include <cstdio>
@@ -92,15 +94,6 @@ namespace mv
     #define MV_ASSERT(expression, message)
 #endif // MV_DEBUG
     
-    
-    using Int8 = signed char;
-    using UInt8 = unsigned char;
-    
-    using Int16 = signed short int;
-    using UInt16 = unsigned short int;
-    
-    using Int32 = signed int;
-    using UInt32 = unsigned int;
     
     namespace detail
     {

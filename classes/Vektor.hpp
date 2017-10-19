@@ -20,7 +20,7 @@
 #ifndef MV_VEKTOR_HPP
 #define MV_VEKTOR_HPP
 
-#include "../functions/Utilities.hpp"
+#include "../utilities/Utilities.hpp"
 
 #include <limits>
 
@@ -243,7 +243,7 @@ namespace mv
             //////////////////////////////////////////////////////////
             
             
-            MV_API void reverse()
+            MV_API void invert()
             {
                 static_assert(std::numeric_limits<Type>::is_signed, "Tried to call VektorImpl reversal with unsigned type");
                 for (UInt16 i = 0u; i < Size; ++i)
@@ -414,9 +414,6 @@ namespace mv
         }; //VektorImpl<UInt16, Size, Type> : VektorImplData
         
     } // detail
-    
-    template <UInt16 Size, typename Type = MV_TYPE>
-    using Vektor = detail::VektorImpl<UInt16, Size, Type>;
     
     #include "../functions/VektorFunctions.hpp"
     

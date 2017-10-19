@@ -20,7 +20,7 @@
 #ifndef MV_QUATERNION_HPP
 #define MV_QUATERNION_HPP
 
-#include "../functions/Utilities.hpp"
+#include "../utilities/Utilities.hpp"
 
 namespace mv
 {
