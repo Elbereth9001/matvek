@@ -115,7 +115,7 @@ static MV_API Vektor<Rows * Cols, Type> ToVektor(const Mat<Rows, Cols, Type>& m)
 template <typename Type>
 static MV_API Mat<3u, 3u, Type> Cross(const Mat<3u, 3u, Type>& m, const Vektor<3u, Type>& v)
 {
-    return Multiply(m, Tilde(v));
+    return m * Tilde(v);
 }
 //////////////////////////////////////////////////////////
 
@@ -124,7 +124,7 @@ static MV_API Mat<3u, 3u, Type> Cross(const Mat<3u, 3u, Type>& m, const Vektor<3
 template <typename Type>
 static MV_API Mat<3u, 3u, Type> Cross(const Vektor<3u, Type>& v, const Mat<3u, 3u, Type>& m)
 {
-    return Multiply(Tilde(v), m);
+    return Tilde(v) * m;
 }
 //////////////////////////////////////////////////////////
 
@@ -251,21 +251,21 @@ static MV_API Mat<4u, 4u, Type> MakeCompositeRotationM4(const Vektor<3u, Type>& 
     using math::Sin;
     const Type z = static_cast<Type>(0);
     const Type o = static_cast<Type>(1);
-    return Multiply(
-        Multiply(
+    return (
+        (
             Mat<4u, 4u, Type>(
                 o, z, z, z,
                 z, Cos(rads[0]), -Sin(rads[0]), z,
                 z, Sin(rads[0]), Cos(rads[0]), z,
                 z, z, z, o
-            ),
+            ) *
             Mat<4u, 4u, Type>(
                 Cos(rads[1]), z, Sin(rads[1]), z,
                 z, o, z, z,
                 -Sin(rads[1]), z, Cos(rads[1]), z,
                 z, z, z, o
             )
-        ),
+        ) *
         Mat<4u, 4u, Type>(
             Cos(rads[2]), -Sin(rads[2]), z, z,
             Sin(rads[2]), Cos(rads[2]), z, z,
@@ -370,25 +370,6 @@ static MV_API Mat<4u, 4u, Type> MakeTranslation4(const Vektor<3, Type>& v)
 
 //Multiply matrix and vektor
 template <UInt8 Rows, UInt8 Cols, typename Type,  UInt16 Size>
-static MV_API Mat<Rows, 1u, Type> Multiply(const Mat<Rows, Cols, Type>& m, const Vektor<Size, Type>& v)
-{
-    static_assert(Cols == Size, "Matrix size mismatch");
-    return Multiply(m, ToMatrix<Rows, 1u>(v));
-}
-//////////////////////////////////////////////////////////
-
-
-//Multiply vektor and matrix
-template <UInt8 Rows, UInt8 Cols, typename Type, UInt16 Size>
-static MV_API Mat<1u, Cols, Type> Multiply(const Vektor<Size, Type>& v, const Mat<Rows, Cols, Type>& m)
-{
-    static_assert(Rows == Size, "Matrix size mismatch");
-    return Multiply(ToMatrix<1u, Rows>(v), m);
-}
-//////////////////////////////////////////////////////////
-
-//Multiply matrix and vektor
-template <UInt8 Rows, UInt8 Cols, typename Type,  UInt16 Size>
 static MV_API Mat<Rows, 1u, Type> operator*(const Mat<Rows, Cols, Type>& m, const Vektor<Size, Type>& v)
 {
     static_assert(Cols == Size, "Matrix size mismatch");
@@ -441,7 +422,7 @@ static MV_API Mat<3u, 3u, Type> Tilde(const Vektor<3u, Type>& v)
 template <typename Type>
 static MV_API Vektor<4u, Type> TransformDirection(const Mat<4u, 4u, Type>& m, const Vektor<4u, Type>& v)
 {
-    return ToVektor(Multiply(m, v));
+    return ToVektor(m * v);
 }
 //////////////////////////////////////////////////////////
 #endif

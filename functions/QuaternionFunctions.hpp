@@ -37,7 +37,7 @@ static MV_API Quat<Type> ComplexConjugate(const Quat<Type>& q)
 template <typename Type>
 static MV_API Quat<Type> DerivativeOfQuaternion(const Quat<Type>& q)
 {
-    return Multiply(q, AngularRateVektor(q._v));
+    return q * AngularRateVektor(q._v);
 }
 //////////////////////////////////////////////////////////
 #endif
@@ -48,7 +48,7 @@ static MV_API Quat<Type> DerivativeOfQuaternion(const Quat<Type>& q)
 template <typename Type>
 static MV_API Quat<Type> DerivativeOfQuaternionConjugate(const Quat<Type>& q)
 {
-    return Multiply(ComplexConjugate(q), -AngularRateVektor(q._v));
+    return ComplexConjugate(q) * -AngularRateVektor(q._v);
 }
 //////////////////////////////////////////////////////////
 #endif
@@ -170,19 +170,18 @@ static MV_API Quat<Type> InterpolateSLERP(const Quat<Type>& q1, const Quat<Type>
 {
     using math::Sin;
     
-    if (t <= static_cast<Type>(0))
-    return q1;
-    if (t >= static_cast<Type>(1))
-    return q2;
+    if (t <= static_cast<Type>(0)) return q1;
+    if (t >= static_cast<Type>(1)) return q2;
     
     const Type theta = math::ACos(
         (q1.S*q2.S + q1.X*q2.X + q1.Y*q2.Y + q1.Z*q2.Z) /
         (q1.length() * q2.length())
     );
     
-    return 
-    Multiply(q1, (Sin((static_cast<Type>(1) - t) * theta)) / (Sin(theta))) +
-    Multiply(q2, (Sin(t * theta)) / (Sin(theta)));
+    return (
+        (q1 * ((Sin((static_cast<Type>(1) - t) * theta)) / (Sin(theta)))) +
+        (q2 * ((Sin(t * theta)) / (Sin(theta))))
+    );
 }
 //////////////////////////////////////////////////////////
 
@@ -191,7 +190,7 @@ static MV_API Quat<Type> InterpolateSLERP(const Quat<Type>& q1, const Quat<Type>
 template <typename Type>
 static MV_API Quat<Type> Inverse(const Quat<Type>& q)
 {
-    return Multiply(ComplexConjugate(q), (static_cast<Type>(1) / (Length(q) * Length(q))));
+    return ComplexConjugate(q) * (static_cast<Type>(1) / (Length(q) * Length(q)));
 }
 //////////////////////////////////////////////////////////
 
@@ -206,25 +205,10 @@ static MV_API Type Length(const Quat<Type>& q)
 
 
 template <typename Type>
-static MV_API Quat<Type> Multiply(const Quat<Type>& q1, const Quat<Type>& q2)
+static MV_API Quat<Type> operator*(Quat<Type> q, const Type scalar)
 {
-    return Quat<Type>(
-        (q1.S * q2.S) - Dot(q1._v, q2._v),
-        Multiply(q2._v, q1._s) + Multiply(q1._v, q2._s) + Cross(q1._v, q2._v)
-    );
-}
-//////////////////////////////////////////////////////////
-
-
-template <typename Type>
-static MV_API Quat<Type> Multiply(const Quat<Type>& q, const Type scalar)
-{
-    return Quat<Type>(
-        q.S * scalar,
-        q.X * scalar,
-        q.Y * scalar,
-        q.Z * scalar
-    );
+    q *= scalar;
+    return q;
 }
 //////////////////////////////////////////////////////////
 

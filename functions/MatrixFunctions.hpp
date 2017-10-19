@@ -352,6 +352,7 @@ static MV_API Mat<4u, 4u, Type> MakePerspective(const Type fovRad, const Type as
 }
 //////////////////////////////////////////////////////////
 
+
 template <UInt8 Size, typename Type>
 static MV_API Mat<Size, Size, Type> MakeRotationSingle(const Type rad, const AXIS axis)
 {
@@ -392,37 +393,8 @@ static MV_API Mat<Size, Size, Type> MakeRotationSingle(const Type rad, const AXI
     
     return ResizeMatrix<Size, Size, true, Type>(rot);
 }
-
-//Multiply matrices
-template <typename Type, UInt8 RowsA, UInt8 ColsARowsB, UInt8 ColsB>
-static MV_API Mat<RowsA, ColsB, Type> Multiply(
-    const Mat<RowsA, ColsARowsB, Type>& matA,
-    const Mat<ColsARowsB, ColsB, Type>& matB
-)
-{
-    Mat<RowsA, ColsB, Type> m;
-    for (UInt8 iRow = 0u; iRow < RowsA; ++iRow)
-    {
-        for (UInt8 iCol = 0u; iCol < ColsB; ++iCol)
-        {
-            for (UInt8 restARow = 0u; restARow < ColsARowsB; ++restARow)
-            {
-                m.at(iRow, iCol) += matA.at(iRow, restARow) * matB.at(restARow, iCol);
-            }
-        }
-    }
-    return m;
-}
 //////////////////////////////////////////////////////////
 
-
-template <UInt8 Rows, UInt8 Cols, typename Type>
-static MV_API Mat<Rows, Cols, Type> Multiply(Mat<Rows, Cols, Type> copy, const Type scalar)
-{
-    copy.scale(scalar);
-    return copy;
-}
-//////////////////////////////////////////////////////////
 
 template <typename Type, UInt8 RowsA, UInt8 ColsARowsB, UInt8 ColsB>
 MV_API Mat<RowsA, ColsB, Type> operator*(
@@ -443,6 +415,8 @@ MV_API Mat<RowsA, ColsB, Type> operator*(
     }
     return m;
 }
+//////////////////////////////////////////////////////////
+
 
 template <UInt8 Rows, UInt8 Cols, typename Type>
 MV_API Mat<Rows, Cols, Type> operator*(Mat<Rows, Cols, Type> m, const Type scalar)
@@ -450,6 +424,8 @@ MV_API Mat<Rows, Cols, Type> operator*(Mat<Rows, Cols, Type> m, const Type scala
     m.scale(scalar);
     return m;
 }
+//////////////////////////////////////////////////////////
+
 
 template <UInt8 Rows, UInt8 Cols, typename Type>
 MV_API Mat<Rows, Cols, Type>& operator*=(Mat<Rows, Cols, Type>& m, const Type scalar)
@@ -457,6 +433,7 @@ MV_API Mat<Rows, Cols, Type>& operator*=(Mat<Rows, Cols, Type>& m, const Type sc
     m.scale(scalar);
     return m;
 }
+//////////////////////////////////////////////////////////
 
 
 #if MV_DEBUG

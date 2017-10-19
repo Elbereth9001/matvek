@@ -137,7 +137,7 @@ static MV_API Quat<Type> MakeRotationQ(const Vektor<3u, Type>& v, const Type rad
 {
     return Quat<Type>(
         math::Cos(rad / static_cast<Type>(2)),
-        mv::Multiply(mv::GetUnitVektor(v), math::Sin(rad / static_cast<Type>(2)))
+        mv::GetUnitVektor(v) * math::Sin(rad / static_cast<Type>(2))
     );
 }
 //////////////////////////////////////////////////////////
@@ -145,9 +145,9 @@ static MV_API Quat<Type> MakeRotationQ(const Vektor<3u, Type>& v, const Type rad
 
 //Rotates v around a rotation of q
 template <typename Type>
-static MV_API Vektor<3u, Type> Multiply(const Quat<Type>& q, const Vektor<3u, Type>& v)
+static MV_API Vektor<3u, Type> operator*(Quat<Type> q, const Vektor<3u, Type>& v)
 {
-    return Multiply(Multiply(q, Quat<Type>(v)), Inverse(q))._v;
+    return ((q * Quat<Type>(v)) * Inverse(q))._v;
 }
 //////////////////////////////////////////////////////////
 
@@ -155,20 +155,19 @@ static MV_API Vektor<3u, Type> Multiply(const Quat<Type>& q, const Vektor<3u, Ty
 template <typename Type>
 static MV_API Vektor<3u, Type> RotateAroundAxis(const Quat<Type>& rot, const Vektor<3u, Type>& point)
 {
-    return Multiply(rot, point);
+    return rot * point;
 }
+//////////////////////////////////////////////////////////
 
 
 template <typename Type>
 static MV_API Vektor<3u, Type> RotateAroundAxis(const Vektor<3u, Type>& axis, const Vektor<3u, Type>& point, const Type rad)
 {
-    return Multiply(
+    return (
         Quat<Type>(
             math::Cos(rad / static_cast<Type>(2)),
-            Multiply(
-                GetUnitVektor(axis), math::Sin(rad / static_cast<Type>(2))
-            )
-        ),
+            GetUnitVektor(axis) * math::Sin(rad / static_cast<Type>(2))
+        ) *
         point
     );
 }

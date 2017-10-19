@@ -45,7 +45,7 @@ static MV_API Type AngularRateAboutVektor(const Vektor<Size, Type>& v)
 template <UInt16 Size, typename Type>
 static MV_API Vektor<Size, Type> AngularRateVektor(const Vektor<Size, Type>& v)
 {
-    return Multiply(v, AngularRateAboutVektor(v));
+    return v * AngularRateAboutVektor(v);
 }
 //////////////////////////////////////////////////////////
 #endif
@@ -56,9 +56,9 @@ static MV_API Vektor<3u, Type> AxisAngleRotation(const Vektor<3u, Type>& target,
 {
     const Vektor<3u, Type> n(GetUnitVektor(axis));
     return Vektor<3u, Type>(
-        Multiply(target, math::Cos(rad)) +
-        Multiply(Multiply(n, Dot(target, n)), (static_cast<Type>(1) - math::Cos(rad))) +
-        Multiply(Cross(n, target), math::Sin(rad))
+        (target * math::Cos(rad)) +
+        ((n * Dot(target, n)) * (static_cast<Type>(1) - math::Cos(rad))) +
+        (Cross(n, target) * math::Sin(rad))
     );
 }
 //////////////////////////////////////////////////////////
@@ -164,7 +164,7 @@ static MV_API Vektor<Size, Type> InterpolateLERP(const Vektor<Size, Type>& v1, c
     return (
         t <= static_cast<MV_TYPE>(0) ? v1 :
         t >= static_cast<MV_TYPE>(1) ? v2 :
-        Vektor<Size, Type>(v1 + Multiply((v2 - v1), t))
+        Vektor<Size, Type>(v1 + ((v2 - v1) * t))
     );
 }
 //////////////////////////////////////////////////////////
@@ -182,8 +182,8 @@ static MV_API Vektor<Size, Type> InterpolateSLERP(const Vektor<Size, Type>& v1, 
         math::Epsilon(theta) ?
         InterpolateLERP(v1, v2, t) :
         Vektor<Size, Type>(
-            Multiply(v1, (math::Sin((static_cast<MV_TYPE>(1) - t) * theta)) / (math::Sin(theta))) +
-            Multiply(v2, (math::Sin(t * theta)) / (math::Sin(theta)))
+            (v1 * ((math::Sin((static_cast<MV_TYPE>(1) - t) * theta)) / (math::Sin(theta)))) +
+            (v2 * ((math::Sin(t * theta)) / (math::Sin(theta))))
         )
     );
 }
@@ -255,15 +255,6 @@ static MV_API Vektor<Size, Type> MakeVektor(Args ... args)
 
 
 template <UInt16 Size, typename Type>
-static MV_API Vektor<Size, Type> Multiply(Vektor<Size, Type> copy, const Type s)
-{
-    copy.scale(s);
-    return copy;
-}
-//////////////////////////////////////////////////////////
-
-
-template <UInt16 Size, typename Type>
 static MV_API Vektor<Size, Type> Normalize(Vektor<Size, Type> copy)
 {
     copy.normalize();
@@ -281,12 +272,16 @@ MV_API Vektor<Size, Type>& operator*=(Vektor<Size, Type>& lhs, const Type& rhs)
     }
     return lhs;
 }
+//////////////////////////////////////////////////////////
+
+
 template <UInt16 Size, typename Type>
-MV_API Vektor<Size, Type> operator*(const Vektor<Size, Type>& lhs, const Type& rhs)
+MV_API Vektor<Size, Type> operator*(Vektor<Size, Type> lhs, const Type& rhs)
 {
     lhs *= rhs;
     return lhs;
 }
+//////////////////////////////////////////////////////////
 
 
 #if MV_DEBUG
@@ -308,7 +303,7 @@ static MV_API void Print(const Vektor<Size, Type>& v)
 template <UInt16 Size, typename Type>
 static MV_API Vektor<Size, Type> Project(const Vektor<Size, Type>& a, const Vektor<Size, Type>& b)
 {
-    return Multiply(b, Dot(a, b) / b.lengthSquared());
+    return b * (Dot(a, b) / b.lengthSquared());
 }
 //////////////////////////////////////////////////////////
 
