@@ -120,26 +120,58 @@ static MV_API Mat<NewRows, NewCols, Type> ResizeMatrix(const Mat<OldRows, OldCol
     }
     // TODO: non-square matrices
     #else
-        return detail::ResizeMatrixHelper<NewRows, NewCols>::ResizeMatrix(m);
+    return detail::ResizeMatrixHelper<NewRows, NewCols>::ResizeMatrix(m);
     #endif
 }
+
+
+//Returns minor
+template <UInt8 Rows, UInt8 Cols, typename Type>
+static MV_API Mat<Rows - 1u, Cols - 1u, Type> GetMinor(const Mat<Rows, Cols, Type>& parent, const UInt8 exRow, const UInt8 exCol)
+{
+    static_assert(Rows > 1u, "Too small matrix to retrieve minor");
+    static_assert(Cols > 1u, "Too small matrix to retrieve minor");
+    
+    Mat<Rows - 1u, Cols - 1u, Type> m;
+    
+    for (UInt8 i = 0u, mi = 0u; i < Rows; ++i, ++mi)
+    {
+        if (i == exRow)
+        {
+            --mi;
+            continue;
+        }
+        
+        for (UInt8 j = 0u, mj = 0u; j < Cols; ++j, ++mj)
+        {
+            if (j == exCol)
+            {
+                --mj;
+                continue;
+            }
+            m.at(mi, mj) = parent.at(i, j);
+        }
+    }
+    return m;
+}
+//////////////////////////////////////////////////////////
 
 
 namespace detail
 {
     //Determinants
-    template <UInt8, UInt8, typename Type>
+    template <typename Type>
     MV_API static Type Det(const Mat<2u, 2u, Type>& m)
     {
-        return (m.at(0, 0) * m.at(1, 1)) - (m.at(0, 1) * m.at(1, 0));
+        return (m.template get<0, 0>() * m.template get<1, 1>()) - (m.template get<0, 1>() * m.template get<1, 0>());
     }
-    template <UInt8, UInt8, typename Type>
+    template <typename Type>
     static MV_API Type Det(const Mat<3u, 3u, Type>& m)
     {
         return (
-            m.at(0, 0) * Det<2u, 2u, Type>(GetMinor(m, 0, 0)) -
-            m.at(0, 1) * Det<2u, 2u, Type>(GetMinor(m, 0, 1)) +
-            m.at(0, 2) * Det<2u, 2u, Type>(GetMinor(m, 0, 2))
+            m.template get<0, 0>() * Det<2u, 2u, Type>(GetMinor(m, 0, 0)) -
+            m.template get<0, 1>() * Det<2u, 2u, Type>(GetMinor(m, 0, 1)) +
+            m.template get<0, 2>() * Det<2u, 2u, Type>(GetMinor(m, 0, 2))
         );
     }
     template <UInt8 Rows, UInt8 Cols, typename Type>
@@ -159,10 +191,13 @@ namespace detail
     
     
     //Cofactors
-    template <UInt8, UInt8, typename Type>
+    template <typename Type>
     static MV_API Mat<2u, 2u, Type> Cof(const Mat<2u, 2u, Type>& m)
     {
-        return Mat<2u, 2u, Type>(m[3], -m[2], -m[1], m[0]);
+        return Mat<2u, 2u, Type>(
+            m.template get<3>(), -m.template get<2>(),
+            -m.template get<1>(), m.template get<0>()
+        );
     }
     template <UInt8 Rows, UInt8 Cols, typename Type>
     static MV_API Mat<Rows, Cols, Type> Cof(const Mat<Rows, Cols, Type>& m)
@@ -198,7 +233,7 @@ static MV_API Mat<Cols, Rows, Type> Adjunct(const Mat<Rows, Cols, Type>& m)
 template <UInt8 Rows, UInt8 Cols, typename Type>
 static MV_API Mat<Rows, Cols, Type> Cofactor(const Mat<Rows, Cols, Type>& m)
 {
-    return detail::Cof<Rows, Cols, Type>(m);
+    return detail::Cof(m);
 }
 //////////////////////////////////////////////////////////
 
@@ -207,7 +242,7 @@ static MV_API Mat<Rows, Cols, Type> Cofactor(const Mat<Rows, Cols, Type>& m)
 template <UInt8 Rows, UInt8 Cols, typename Type>
 static MV_API Type Determinant(const Mat<Rows, Cols, Type>& m)
 {
-    return detail::Det<Rows, Cols, Type>(m);
+    return detail::Det(m);
 }
 //////////////////////////////////////////////////////////
 
@@ -221,51 +256,17 @@ static MV_API Type GetCompositeRotationAngle(const Mat<3u, 3u, Type>& m)
 //////////////////////////////////////////////////////////
 
 
-//Returns minor
-template <UInt8 Rows, UInt8 Cols, typename Type>
-static MV_API Mat<Rows - 1u, Cols - 1u, Type> GetMinor(const Mat<Rows, Cols, Type>& parent, const UInt8 exRow, const UInt8 exCol)
-{
-    MV_ASSERT(Rows > 1u, "Too small matrix to retrieve minor");
-    MV_ASSERT(Cols > 1u, "Too small matrix to retrieve minor");
-    
-    Mat<Rows - 1u, Cols - 1u, Type> m;
-    
-    for (UInt8 i = 0u, mi = 0u; i < Rows; ++i, ++mi)
-    {
-        if (i == exRow)
-        {
-            --mi;
-            continue;
-        }
-        
-        for (UInt8 j = 0u, mj = 0u; j < Cols; ++j, ++mj)
-        {
-            if (j == exCol)
-            {
-                --mj;
-                continue;
-            }
-            m.at(mi, mj) = parent.at(i, j);
-        }
-    }
-    return m;
-}
-//////////////////////////////////////////////////////////
-
-
 //Inverse matrix
 template <UInt8 Rows, UInt8 Cols, typename Type>
-static MV_API Mat<Rows, Cols, Type> Inverse(const Mat<Rows, Cols, Type>& m)
+static MV_API Mat<Cols, Rows, Type> Inverse(const Mat<Rows, Cols, Type>& m)
 {
     Type det = Determinant(m);
-    if MV_API (math::Epsilon(det))
+    if (math::Epsilon(det))
     {
         MV_ASSERT(false, "Matrix division by zero");
         det = static_cast<Type>(detail::MV_BOUNDARY);
     }
-    
     Mat<Cols, Rows, Type> mat(Adjunct(m));
-    
     for (auto& itr : mat.data())
     {
         itr /= det;
@@ -281,7 +282,9 @@ static MV_API Mat<Size, Size, Type> MakeIdentity()
 {
     Mat<Size, Size, Type> m;
     for (UInt8 i = 0u; i < Size; ++i)
-    m.at(i, i) = static_cast<Type>(1);
+    {
+        m.at(i, i) = static_cast<Type>(1);
+    }
     return m;
 }
 //////////////////////////////////////////////////////////
@@ -314,7 +317,7 @@ static MV_API Mat<Rows, Cols, Type> MakeMatrix(Args ... args)
 
 
 template <typename Type>
-static MV_API Mat<4u, 4u, Type> MakeOrtographic(
+static MV_API Mat<4u, 4u, Type> MakeOrthographic(
     const Type left,
     const Type right,
     const Type top,
@@ -323,14 +326,11 @@ static MV_API Mat<4u, 4u, Type> MakeOrtographic(
     const Type far
 )
 {
-    const Type z = static_cast<Type>(0);
-    const Type t = static_cast<Type>(2);
-    
-    return Mat<4u, 4u, Type>(
-        t / (right - left), z, z, z,
-        z, t / (top - bottom), z, z,
-        z, z, -t / (far - near), z,
-        -(right + left) / (right - left), -(top + bottom) / (top - bottom), -(far + near) / (far - near), z
+    return MakeMatrix<4u, 4u, Type>(
+        static_cast<Type>(2) / (right - left), 0, 0, 0,
+        0, static_cast<Type>(2) / (top - bottom), 0, 0,
+        0, 0, -static_cast<Type>(2) / (far - near), 0,
+        -(right + left) / (right - left), -(top + bottom) / (top - bottom), -(far + near) / (far - near), 1
     );
 }
 //////////////////////////////////////////////////////////
@@ -339,15 +339,12 @@ static MV_API Mat<4u, 4u, Type> MakeOrtographic(
 template <typename Type>
 static MV_API Mat<4u, 4u, Type> MakePerspective(const Type fovRad, const Type aspectRatio, const Type near, const Type far)
 {
-    const Type z = static_cast<Type>(0);
-    const Type o = static_cast<Type>(1);
     const Type halfTanFovY = math::Tan(fovRad / static_cast<Type>(2));
-    
-    return Mat<4u, 4u, Type>(
-        o / (aspectRatio * halfTanFovY), z, z, z,
-        z, o / halfTanFovY, z, z,
-        z, z, -(far + near) / (far - near), -o,
-        z, z, -(static_cast<Type>(2) * far * near) / (far - near), z
+    return MakeMatrix<4u, 4u, Type>(
+        static_cast<Type>(1) / (aspectRatio * halfTanFovY), 0, 0, 0,
+        0, static_cast<Type>(1) / halfTanFovY, 0, 0,
+        0, 0, -(far + near) / (far - near), -1,
+        0, 0, -(static_cast<Type>(2) * far * near) / (far - near), 1
     );
 }
 //////////////////////////////////////////////////////////
@@ -358,33 +355,30 @@ static MV_API Mat<Size, Size, Type> MakeRotation(const Type rad, const AXIS axis
 {
     using math::Cos;
     using math::Sin;
-    
-    const Type z = static_cast<Type>(0);
-    const Type o = static_cast<Type>(1);
-    
+
     Mat<3u, 3u, Type> rot{};
     
     switch (axis)
     {
         case mv::AXIS::X:
-        rot = Mat<3u, 3u, Type>(
-            o, z, z,
-            z, Cos(rad), -Sin(rad),
-            z, Sin(rad), Cos(rad)
+        rot = MakeMatrix<3u, 3u, Type>(
+            1, 0, 0,
+            0, Cos(rad), -Sin(rad),
+            0, Sin(rad), Cos(rad)
         );
         break;
         case mv::AXIS::Y:
-        rot = Mat<3u, 3u, Type>(
-            Cos(rad), z, Sin(rad),
-            z, o, z,
-            -Sin(rad), z, Cos(rad)
+        rot = MakeMatrix<3u, 3u, Type>(
+            Cos(rad), 0, Sin(rad),
+            0, 1, 0,
+            -Sin(rad), 0, Cos(rad)
         );
         break;
         case mv::AXIS::Z:
-        rot = Mat<3u, 3u, Type>(
-            Cos(rad), -Sin(rad), z,
-            Sin(rad), Cos(rad), z,
-            z, z, o
+        rot = MakeMatrix<3u, 3u, Type>(
+            Cos(rad), -Sin(rad), 0,
+            Sin(rad), Cos(rad), 0,
+            0, 0, 1
         );
         break;
         default:
@@ -495,7 +489,7 @@ static MV_API Mat<NewRows, NewCols, Type> Transpose(const Mat<NewCols, NewRows, 
     {
         n.at(oldCol, oldRow) = m.at(oldRow, oldCol);
         
-        if MV_API (oldCol == (NewRows - 1u))
+        if (oldCol == (NewRows - 1u))
         {
             oldCol = 0u;
             ++oldRow;

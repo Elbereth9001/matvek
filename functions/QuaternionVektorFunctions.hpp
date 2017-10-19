@@ -130,6 +130,19 @@ static MV_API Quat<Type> MakeCompositeRotationQ(const Vektor<3u, Type>& rads)
 }
 //////////////////////////////////////////////////////////
 
+template <typename Type>
+static MV_API Quat<Type> MakeQuaternion(const Vektor<3u, Type>& angles, const bool rads)
+{
+    const Type x = (rads ? angles.x : ToRad(angles.x)) / static_cast<Type>(2);
+    const Type y = (rads ? angles.y : ToRad(angles.y)) / static_cast<Type>(2);
+    const Type z = (rads ? angles.z : ToRad(angles.z)) / static_cast<Type>(2);
+
+    return (
+        Quat<Type>(math::Cos(x), math::Sin(x), static_cast<Type>(0), static_cast<Type>(0)) *
+        Quat<Type>(math::Cos(y), static_cast<Type>(0), math::Sin(y), static_cast<Type>(0)) *
+        Quat<Type>(math::Cos(z), static_cast<Type>(0), static_cast<Type>(0), math::Sin(z))
+    );
+}
 
 //Returns rotation quaternion rad radians around axis v
 template <typename Type>

@@ -28,6 +28,7 @@ namespace mv
     template <UInt8 Rows, UInt8 Columns = Rows, typename Type = MV_TYPE>
     class Mat
     {
+        static_assert(Rows != 0u && Columns != 0u, "Cannot create matrix of dimension 0");
         
         //Matrix data
         union
@@ -80,7 +81,7 @@ namespace mv
         
         MV_API Mat(Mat&&) = default;
         MV_API Mat(const Mat&) = default;
-
+        
         #if 0
         
         //Move ctor
@@ -108,19 +109,12 @@ namespace mv
             return *this;
         }
         //////////////////////////////////////////////////////////
-
+        
+        
         MV_API Mat& operator=(const Mat& other)
         {
             m_data = other.m_data;
             return *this;
-        }
-        
-        
-        //Swap
-        MV_API friend void swap(Mat& first, Mat& second)
-        {
-            using std::swap;
-            swap(first.m_data, second.m_data);
         }
         //////////////////////////////////////////////////////////
         
@@ -129,7 +123,7 @@ namespace mv
         template <typename T, typename std::enable_if<detail::MV_IsAllowed<T, Type>::value>::type* = nullptr>
         MV_API operator Mat<Rows, Columns, T>()
         {
-            std::array<T, Rows * Columns> arr;
+            std::array<T, Rows * Columns> arr{};
             for (UInt16 i = 0u; i < Rows * Columns; ++i)
             {
                 arr[i] = static_cast<T>(m_data[i]);
@@ -138,29 +132,40 @@ namespace mv
         }
         //////////////////////////////////////////////////////////
         
-        
-        //Return number of elements in matrix
-        MV_API UInt16 size() const
+        MV_API const Type* array() const
         {
-            return Rows * Columns;
+            return m_data.data();
+        }
+        MV_API Type* array()
+        {
+            return m_data.data();
+        }
+        
+        
+        MV_API Type at(const UInt16 index) const
+        {
+            MV_ASSERT(index < (Rows * Columns), "Raw index out of range");
+            return m_data[index];
+        }
+        MV_API Type& at(const UInt16 index)
+        {
+            MV_ASSERT(index < (Rows * Columns), "Raw index out of range");
+            return m_data[index];
         }
         //////////////////////////////////////////////////////////
         
-        MV_API void scale(const Type scalar)
-        {
-            for (UInt16 i = 0u; i < Rows * Columns; ++i)
-            {
-                m_data[i] *= scalar;
-            }
-        }
         
-        //Fill entire matrix with one data value
-        MV_API void fill(Type data)
+        MV_API Type at(const UInt8 row, const UInt8 column) const
         {
-            for (auto& itr : m_data)
-            {
-                itr = data;
-            }
+            MV_ASSERT(row < Rows, "Row index out of range");
+            MV_ASSERT(column < Columns, "Column index out of range");
+            return m_dataRows[row][column];
+        }
+        MV_API Type& at(const UInt8 row, const UInt8 column)
+        {
+            MV_ASSERT(row < Rows, "Row index out of range");
+            MV_ASSERT(column < Columns, "Column index out of range");
+            return m_dataRows[row][column];
         }
         //////////////////////////////////////////////////////////
         
@@ -192,6 +197,60 @@ namespace mv
         }
         //////////////////////////////////////////////////////////
         
+        
+        //Fill entire matrix with one data value
+        MV_API void fill(Type data)
+        {
+            for (auto& itr : m_data)
+            {
+                itr = data;
+            }
+        }
+        //////////////////////////////////////////////////////////
+        
+        
+        template <UInt16 I>
+        inline MV_API const Type& get() const
+        {
+            static_assert(I < (Rows * Columns), "Matrix: Get<I>: Invalid index");
+            return std::get<I>(m_data);
+        }
+        template <UInt8 R, UInt8 C>
+        inline MV_API const Type& get() const
+        {
+            static_assert(R < Rows && C < Columns, "Matrix: Get<R, C>: Invalid index");
+            return std::get<C>(std::get<R>(m_dataRows));
+        }
+        //////////////////////////////////////////////////////////
+        
+        
+        MV_API void scale(const Type scalar)
+        {
+            for (UInt16 i = 0u; i < Rows * Columns; ++i)
+            {
+                m_data[i] *= scalar;
+            }
+        }
+        //////////////////////////////////////////////////////////
+        
+        
+        //Return number of elements in matrix
+        MV_API UInt16 size() const
+        {
+            return Rows * Columns;
+        }
+        //////////////////////////////////////////////////////////
+        
+        
+        //Swap
+        MV_API friend void swap(Mat& first, Mat& second)
+        {
+            using std::swap;
+            swap(first.m_data, second.m_data);
+        }
+        //////////////////////////////////////////////////////////
+        
+        
         //Return data from raw index
         MV_API Type operator[](const UInt16 index) const
         {
@@ -199,16 +258,6 @@ namespace mv
             return m_data[index];
         }
         MV_API Type& operator[](const UInt16 index)
-        {
-            MV_ASSERT(index < (Rows * Columns), "Raw index out of range");
-            return m_data[index];
-        }
-        MV_API Type at(const UInt16 index) const
-        {
-            MV_ASSERT(index < (Rows * Columns), "Raw index out of range");
-            return m_data[index];
-        }
-        MV_API Type& at(const UInt16 index)
         {
             MV_ASSERT(index < (Rows * Columns), "Raw index out of range");
             return m_data[index];
@@ -228,18 +277,6 @@ namespace mv
             MV_ASSERT(index.Row < Rows, "Row index out of range");
             MV_ASSERT(index.Col < Columns, "Column index out of range");
             return m_data[index.Row][index.Col];
-        }
-        MV_API Type at(const UInt8 row, const UInt8 column) const
-        {
-            MV_ASSERT(row < Rows, "Row index out of range");
-            MV_ASSERT(column < Columns, "Column index out of range");
-            return m_dataRows[row][column];
-        }
-        MV_API Type& at(const UInt8 row, const UInt8 column)
-        {
-            MV_ASSERT(row < Rows, "Row index out of range");
-            MV_ASSERT(column < Columns, "Column index out of range");
-            return m_dataRows[row][column];
         }
         //////////////////////////////////////////////////////////
         

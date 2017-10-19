@@ -32,7 +32,7 @@ namespace mv
     namespace detail
     {
         template <typename SizeType, SizeType, typename>
-        struct VektorImpl;
+        class VektorImpl;
     }
 
     template <UInt16 Size, typename Type>

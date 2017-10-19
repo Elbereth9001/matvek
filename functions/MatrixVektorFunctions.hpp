@@ -35,29 +35,30 @@ static MV_API Mat<Rows, Cols, Type> ToMatrix(const Vektor<Size, Type>& v)
 #if !MV_CONSTEXPR
 namespace detail
 {
-    template <bool, UInt8 Rows, UInt8 Cols, typename Type>
+    template <bool>
     struct ToVektorHelper final
     {
         // Row by row
         MV_DISABLE_CLASS(ToVektorHelper);
+
+        template <UInt8 Rows, UInt8 Cols, typename Type>
         static Vektor<Rows * Cols, Type> ToVektor(const Mat<Rows, Cols, Type>& m)
         {
             std::array<Type, Rows * Cols> arr;
-            for (UInt8 i = 0u; i < Rows; ++i)
+            for (UInt16 i = 0u; i < (Rows * Cols); ++i)
             {
-                for (UInt8 j = 0u; j < Cols; ++i)
-                {
-                    arr[(i * Cols) + j] = m.at(i, j);
-                }
+                arr[i] = m[i];
             }
             return Vektor<Rows * Cols, Type>(arr);
         }
     };
-    template <UInt8 Rows, UInt8 Cols, typename Type>
-    struct ToVektorHelper<false, Rows, Cols, Type> final
+    template <>
+    struct ToVektorHelper<false> final
     {
         // Column by column
         MV_DISABLE_CLASS(ToVektorHelper);
+
+        template <UInt8 Rows, UInt8 Cols, typename Type>
         static Vektor<Rows * Cols, Type> ToVektor(const Mat<Rows, Cols, Type>& m)
         {
             std::array<Type, Rows * Cols> arr;
@@ -76,7 +77,7 @@ namespace detail
 } // detail
 #endif // !MV_CONSTEXPR ToVektorHelper
 
-template <bool FlattenByRow, UInt8 Rows, UInt8 Cols, typename Type>
+template <bool FlattenByRow = true, UInt8 Rows, UInt8 Cols, typename Type>
 static MV_API Vektor<Rows * Cols, Type> ToVektor(const Mat<Rows, Cols, Type>& m)
 {
     #if MV_CONSTEXPR
@@ -105,7 +106,7 @@ static MV_API Vektor<Rows * Cols, Type> ToVektor(const Mat<Rows, Cols, Type>& m)
     }
     return Vektor<Rows * Cols, Type>(arr);
     #else
-    return detail::ToVektorHelper<FlattenByRow, Rows, Cols, Type>::ToVektor(m);
+    return detail::ToVektorHelper<FlattenByRow>::ToVektor(m);
     #endif
 }
 
@@ -134,9 +135,10 @@ template <typename Type>
 static MV_API Vektor<3u, Type> GetCompositeRotationAxis(const Mat<3u, 3u, Type>& m)
 {
     return Vektor<3u, Type>(
-        m.at(1, 2) - m.at(2, 1),
-        m.at(2, 0) - m.at(0, 2),
-        m.at(0, 1) - m.at(1, 0)
+        // m.at(1, 2), m.at(2, 0), m.at(0, 1)
+        m.template get<1u, 2u>() - m.template get<2u, 1u>(),
+        m.template get<2u, 0u>() - m.template get<0u, 2u>(),
+        m.template get<0u, 1u>() - m.template get<1u, 0u>()
     );
 }
 //////////////////////////////////////////////////////////
@@ -145,18 +147,33 @@ static MV_API Vektor<3u, Type> GetCompositeRotationAxis(const Mat<3u, 3u, Type>&
 template <typename Type>
 static MV_API Mat<4u, 4u, Type> LookAt(const Vektor<3u, Type>& eye, const Vektor<3u, Type>& target, const Vektor<3u, Type>& up)
 {
-    const Vektor<3u, Type> Z(GetUnitVektor(eye - target));
+    const Vektor<3u, Type> Z(GetUnitVektor(target - eye));
     const Vektor<3u, Type> X(GetUnitVektor(Cross(up, Z)));
     const Vektor<3u, Type> Y(Cross(Z, X));
     
-    return mv::Mat<4u, 4u, Type>(
-        X[0], Y[0], Z[0], static_cast<Type>(0),
-        X[1], Y[1], Z[1], static_cast<Type>(0),
-        X[2], Y[2], Z[2], static_cast<Type>(0),
-        -Dot(X, eye), -Dot(Y, eye), -Dot(Z, eye), static_cast<Type>(1)
+    return MakeMatrix<4u, 4u, Type>(
+        X.template get<0>(), Y.template get<0>(), Z.template get<0>(), 0,
+        X.template get<1>(), Y.template get<1>(), Z.template get<1>(), 0,
+        X.template get<2>(), Y.template get<2>(), Z.template get<2>(), 0,
+        -Dot(X, eye), -Dot(Y, eye), -Dot(Z, eye), 1
     );
 }
 //////////////////////////////////////////////////////////
+
+template <typename Type>
+static MV_API Mat<4u, 4u, Type> LookAt2(const Vektor<3u, Type>& eye, const Vektor<3u, Type>& target, const Vektor<3u, Type>& up)
+{
+    const Vektor<3u, Type> f(Normalize(target - eye));
+    const Vektor<3u, Type> s(Normalize(Cross(f, up)));
+    const Vektor<3u, Type> u(Cross(s, f));
+
+    return MakeMatrix<4u, 4u, Type>(
+        s.template get<0>(), s.template get<1>(), s.template get<2>(), 0,
+        u.template get<0>(), u.template get<1>(), u.template get<2>(), 0,
+        -f.template get<0>(), -f.template get<1>(), -f.template get<2>(), 0,
+        -Dot(s, eye), -Dot(u, eye), Dot(f, eye), 1
+    );
+}
 
 
 #if MV_EXPERIMENTAL
@@ -249,28 +266,26 @@ static MV_API Mat<4u, 4u, Type> MakeCompositeRotationM4(const Vektor<3u, Type>& 
 {
     using math::Cos;
     using math::Sin;
-    const Type z = static_cast<Type>(0);
-    const Type o = static_cast<Type>(1);
     return (
         (
-            Mat<4u, 4u, Type>(
-                o, z, z, z,
-                z, Cos(rads[0]), -Sin(rads[0]), z,
-                z, Sin(rads[0]), Cos(rads[0]), z,
-                z, z, z, o
+            MakeMatrix<4u, 4u, Type>(
+                1, 0, 0, 0,
+                0, Cos(rads[0]), -Sin(rads[0]), 0,
+                0, Sin(rads[0]), Cos(rads[0]), 0,
+                0, 0, 0, 1
             ) *
-            Mat<4u, 4u, Type>(
-                Cos(rads[1]), z, Sin(rads[1]), z,
-                z, o, z, z,
-                -Sin(rads[1]), z, Cos(rads[1]), z,
-                z, z, z, o
+            MakeMatrix<4u, 4u, Type>(
+                Cos(rads[1]), 0, Sin(rads[1]), 0,
+                0, 1, 0, 0,
+                -Sin(rads[1]), 0, Cos(rads[1]), 0,
+                0, 0, 0, 1
             )
         ) *
-        Mat<4u, 4u, Type>(
-            Cos(rads[2]), -Sin(rads[2]), z, z,
-            Sin(rads[2]), Cos(rads[2]), z, z,
-            z, z, o, z,
-            z, z, z, o
+        MakeMatrix<4u, 4u, Type>(
+            Cos(rads[2]), -Sin(rads[2]), 0, 0,
+            Sin(rads[2]), Cos(rads[2]), 0, 0,
+            0, 0, 1, 0,
+            0, 0, 0, 1
         )
     );
 }
@@ -287,10 +302,16 @@ static MV_API Mat<3u, 3u, Type> MakeRotationM(const Vektor<3u, Type>& v, const T
     const Type c = math::Cos(theta);
     const Type s = math::Sin(theta);
     
-    return Mat<3u, 3u, Type>(
-        v[0] * v[0] + (v[1] * v[1] + v[2] * v[2])*c, v[0] * v[1] * (o - c) - v[2] * s, v[0] * v[2] * (o - c) + v[1] * s,
-        v[0] * v[1] * (o - c) + v[2] * s, v[1] * v[1] + (v[2] * v[2] + v[0] * v[0])*c, v[1] * v[2] * (o - c) - v[0] * s,
-        v[2] * v[0] * (o - c) - v[1] * s, v[1] * v[2] * (o - c) + v[0] * s, v[2] * v[2] + (v[0] * v[0] + v[1] * v[1])*c
+    return MakeMatrix<3u, 3u, Type>(
+        v.template get<0>() * v.template get<0>() + (v.template get<1>() * v.template get<1>() + v.template get<2>() * v.template get<2>())*c,
+        v.template get<0>() * v.template get<1>() * (o - c) - v.template get<2>() * s, 
+        v.template get<0>() * v.template get<2>() * (o - c) + v.template get<1>() * s,
+        v.template get<0>() * v.template get<1>() * (o - c) + v.template get<2>() * s, 
+        v.template get<1>() * v.template get<1>() + (v.template get<2>() * v.template get<2>() + v.template get<0>() * v.template get<0>())*c, 
+        v.template get<1>() * v.template get<2>() * (o - c) - v.template get<0>() * s,
+        v.template get<2>() * v.template get<0>() * (o - c) - v.template get<1>() * s, 
+        v.template get<1>() * v.template get<2>() * (o - c) + v.template get<0>() * s, 
+        v.template get<2>() * v.template get<2>() + (v.template get<0>() * v.template get<0>() + v.template get<1>() * v.template get<1>())*c
     );
 }
 //////////////////////////////////////////////////////////
@@ -305,7 +326,7 @@ static MV_API Mat<Size + 1u, Size + 1, Type> MakeScaling(const Vektor<Size, Type
     {
         for (UInt8 j = 0u; j < (Size + 1u); ++j)
         {
-            arr[(i * (Size + 1u)) + j] = ((i == j) ? scaling[i] : static_cast<Type>(0));
+            arr[(i * (Size + 1u)) + j] = ((i == j) && (i < Size) && (j < Size) ? scaling[i] : static_cast<Type>(0));
         }
     }
     arr[((Size + 1u) * (Size + 1u))  - 1u] = static_cast<Type>(1);
@@ -316,12 +337,11 @@ static MV_API Mat<Size + 1u, Size + 1, Type> MakeScaling(const Vektor<Size, Type
 template <typename Type>
 static MV_API Mat<4u, 4u, Type> MakeScalingViaPoint(const Vektor<3u, Type>& s, const Vektor<3u, Type>& p)
 {
-    const Type z = static_cast<Type>(0);
-    return Mat<4u, 4u, Type>(
-        s[0], z, z, p[0] * (1 - s[0]),
-        z, s[1], z, p[1] * (1 - s[1]),
-        z, z, s[2], p[2] * (1 - s[2]),
-        z, z, z, static_cast<Type>(1)
+    return MakeMatrix<4u, 4u, Type>(
+        s.template get<0>(), 0, 0, p.template get<0>() * (static_cast<Type>(1) - s.template get<0>()),
+        0, s.template get<1>(), 0, p.template get<1>() * (static_cast<Type>(1) - s.template get<1>()),
+        0, 0, s.template get<2>(), p.template get<2>() * (static_cast<Type>(1) - s.template get<2>()),
+        0, 0, 0, 1
     );
 }
 //////////////////////////////////////////////////////////
@@ -338,6 +358,7 @@ static MV_API Mat<Size + 1u, Size + 1u, Type> MakeTranslation(const Vektor<Size,
         {
             arr[(i * (Size + 1u)) + j] = static_cast<Type>((i == j) ? 1 : 0);
         }
+        //if (i < Size) arr[(i * (Size + 1u)) + Size] = translation[i];
     }
     for (UInt16 i = 0u; i < Size; ++i)
     {
@@ -372,14 +393,19 @@ static MV_API Mat<1u, Cols, Type> operator*(const Vektor<Size, Type>& v, const M
 template <typename Type>
 static MV_API Mat<4u, 4u, Type> RotateAroundAxis(const Vektor<3u, Type>& v, const Type rad)
 {
-    using math::Cos;
-    using math::Sin;
-    
-    const Type K = static_cast<Type>(1) - Cos(rad);
-    return Mat<4u, 4u, Type>(
-        (v[0] * v[0]) * K + Cos(rad), v[0] * v[1] * K - v[2] * Sin(rad), v[0] * v[2] * K + v[1] * Sin(rad),
-        v[0] * v[1] * K + v[2] * Sin(rad), (v[1] * v[1]) * K + Cos(rad), v[1] * v[2] * K - v[0] * Sin(rad),
-        v[0] * v[2] * K - v[1] * Sin(rad), v[1] * v[2] * K + v[0] * Sin(rad), (v[2] * v[2]) * K + Cos(rad)
+    const Type s = math::Sin(rad);
+    const Type c = math::Cos(rad);
+    const Type K = static_cast<Type>(1) - c;
+    return MakeMatrix<4u, 4u, Type>(
+        (v.template get<0>() * v.template get<0>()) * K + c,
+        v.template get<0>() * v.template get<1>() * K - v.template get<2>() * s,
+        v.template get<0>() * v.template get<2>() * K + v.template get<1>() * s,
+        v.template get<0>() * v.template get<1>() * K + v.template get<2>() * s,
+        (v.template get<1>() * v.template get<1>()) * K + c,
+        v.template get<1>() * v.template get<2>() * K - v.template get<0>() * s,
+        v.template get<0>() * v.template get<2>() * K - v.template get<1>() * s,
+        v.template get<1>() * v.template get<2>() * K + v.template get<0>() * s,
+        (v.template get<2>() * v.template get<2>()) * K + c
     );
 }
 
@@ -388,11 +414,10 @@ static MV_API Mat<4u, 4u, Type> RotateAroundAxis(const Vektor<3u, Type>& v, cons
 template <typename Type>
 static MV_API Mat<3u, 3u, Type> Tilde(const Vektor<3u, Type>& v)
 {
-    const Type z = static_cast<Type>(0);
-    return Mat<3u, 3u, Type>(
-        z, -v[2], v[1],
-        v[2], z, -v[0],
-        -v[1], v[0], z
+    return MakeMatrix<3u, 3u, Type>(
+        0, -v.template get<2>(), v.template get<1>(),
+        v.template get<2>(), 0, -v.template get<0>(),
+        -v.template get<1>(), v.template get<0>(), 0
     );
 }
 //////////////////////////////////////////////////////////

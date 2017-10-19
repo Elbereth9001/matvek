@@ -47,8 +47,9 @@ namespace mv
         template <UInt16 Size, typename Type>
         struct VektorData
         {
-            std::array<Type, Size> _data;
-            MV_VEKTORDATA_CTORS(VektorData, _data, Type, Size);
+            static_assert(Size != 0u, "Cannot create VektorData of dimension 0");
+            std::array<Type, Size> m_data;
+            MV_VEKTORDATA_CTORS(VektorData, m_data, Type, Size);
         };
         template <typename Type>
         struct VektorData<2u, Type>
@@ -57,7 +58,7 @@ namespace mv
             {
                 struct
                 {
-                    std::array<Type, 2u> _data;
+                    std::array<Type, 2u> m_data;
                 };
                 struct
                 {
@@ -65,7 +66,7 @@ namespace mv
                     Type y;
                 };
             };
-            MV_VEKTORDATA_CTORS(VektorData, _data, Type, 2u);
+            MV_VEKTORDATA_CTORS(VektorData, m_data, Type, 2u);
         };
         template <typename Type>
         struct VektorData<3u, Type>
@@ -74,7 +75,7 @@ namespace mv
             {
                 struct
                 {
-                    std::array<Type, 3u> _data;
+                    std::array<Type, 3u> m_data;
                 };
                 struct
                 {
@@ -83,7 +84,7 @@ namespace mv
                     Type z;
                 };
             };
-            MV_VEKTORDATA_CTORS(VektorData, _data, Type, 3u);
+            MV_VEKTORDATA_CTORS(VektorData, m_data, Type, 3u);
         };
         template <typename Type>
         struct VektorData<4u, Type>
@@ -92,7 +93,7 @@ namespace mv
             {
                 struct
                 {
-                    std::array<Type, 4u> _data;
+                    std::array<Type, 4u> m_data;
                 };
                 struct
                 {
@@ -102,18 +103,18 @@ namespace mv
                     Type w;
                 };
             };
-            MV_VEKTORDATA_CTORS(VektorData, _data, Type, 4u);
+            MV_VEKTORDATA_CTORS(VektorData, m_data, Type, 4u);
         };
         
         
         template <UInt16 Size, typename Type>
-        struct VektorImpl<UInt16, Size, Type> : public detail::VektorData<Size, Type>
+        class VektorImpl<UInt16, Size, Type> : public detail::VektorData<Size, Type>
         {
-            //std::array<Type, Size> _data;
-            
             using VData = detail::VektorData<Size, Type>;
             
         public:
+
+            static_assert(Size != 0u, "Cannot create a vektor of dimension 0");
             
             // Default ctor (zero vektor)
             MV_API VektorImpl() : VData() {}
@@ -137,7 +138,7 @@ namespace mv
                 std::array<T, Size> arr;
                 for (UInt16 i = 0u; i < Size; ++i)
                 {
-                    arr[i] = static_cast<T>(this->_data[i]);
+                    arr[i] = static_cast<T>(this->m_data[i]);
                 }
                 return VektorImpl<UInt16, Size, T>(arr);
             }
@@ -149,8 +150,19 @@ namespace mv
             {
                 for (UInt16 i = 0u; i < Size; ++i)
                 {
-                    this->_data[i] = math::Abs(this->_data[i]);
+                    this->m_data[i] = math::Abs(this->m_data[i]);
                 }
+            }
+            //////////////////////////////////////////////////////////
+            
+            
+            MV_API const Type* array() const
+            {
+                return this->m_data.data();
+            }
+            MV_API Type* array()
+            {
+                return this->m_data.data();
             }
             //////////////////////////////////////////////////////////
             
@@ -160,7 +172,7 @@ namespace mv
             {
                 for (UInt16 i = 0u; i < Size; ++i)
                 {
-                    this->_data[i] = value;
+                    this->m_data[i] = value;
                 }
             }
             //////////////////////////////////////////////////////////
@@ -169,11 +181,11 @@ namespace mv
             // Return vektor data
             MV_API const std::array<Type, Size>& data() const
             {
-                return this->_data;
+                return this->m_data;
             }
             MV_API std::array<Type, Size>& data()
             {
-                return this->_data;
+                return this->m_data;
             }
             //////////////////////////////////////////////////////////
             
@@ -183,7 +195,7 @@ namespace mv
             {
                 for (UInt16 i = 0u; i < Size; ++i)
                 {
-                    if (min[i] < this->_data[i] || max[i] < this->_data[i])
+                    if (min[i] < this->m_data[i] || max[i] < this->m_data[i])
                     {
                         return false;
                     }
@@ -198,7 +210,7 @@ namespace mv
             {
                 for (UInt16 i = 0u; i < Size; ++i)
                 {
-                    if ((target[i] - offset) < this->_data[i] || (target[i] + offset) < this->_data[i])
+                    if ((target[i] - offset) < this->m_data[i] || (target[i] + offset) < this->m_data[i])
                     {
                         return false;
                     }
@@ -219,7 +231,7 @@ namespace mv
                 Type l = static_cast<Type>(0);
                 for (UInt16 i = 0u; i < Size; ++i)
                 {
-                    l += this->_data[i] * this->_data[i];
+                    l += this->m_data[i] * this->m_data[i];
                 }
                 return l;
             }
@@ -237,7 +249,7 @@ namespace mv
                 l = static_cast<Type>(1) / l;
                 for (UInt16 i = 0u; i < Size; ++i)
                 {
-                    this->_data[i] *= l;
+                    this->m_data[i] *= l;
                 }
             }
             //////////////////////////////////////////////////////////
@@ -248,7 +260,7 @@ namespace mv
                 static_assert(std::numeric_limits<Type>::is_signed, "Tried to call VektorImpl reversal with unsigned type");
                 for (UInt16 i = 0u; i < Size; ++i)
                 {
-                    this->_data[i] = -this->_data[i];
+                    this->m_data[i] = -this->m_data[i];
                 }
             }
             //////////////////////////////////////////////////////////
@@ -258,7 +270,7 @@ namespace mv
             {
                 for (UInt16 i = 0u; i < Size; ++i)
                 {
-                    this->_data[i] *= v[i];
+                    this->m_data[i] *= v[i];
                 }
             }
             //////////////////////////////////////////////////////////
@@ -268,7 +280,7 @@ namespace mv
             {
                 for (UInt16 i = 0u; i < Size; ++i)
                 {
-                    this->_data[i] *= s;
+                    this->m_data[i] *= s;
                 }
             }
             //////////////////////////////////////////////////////////
@@ -286,12 +298,12 @@ namespace mv
             MV_API const Type& at(const UInt16 index) const
             {
                 MV_ASSERT(index < Size && index >= 0u, "VektorImpl index out of range");
-                return this->_data[index];
+                return this->m_data[index];
             }
             MV_API Type& at(const UInt16 index)
             {
                 MV_ASSERT(index < Size && index >= 0u, "VektorImpl index out of range");
-                return this->_data[index];
+                return this->m_data[index];
             }
             //////////////////////////////////////////////////////////
             
@@ -299,19 +311,19 @@ namespace mv
             //Access data in index
             MV_API const Type& operator[](const UInt16 index) const
             {
-                return this->_data[index];
+                return this->m_data[index];
             }
             MV_API Type& operator[](const UInt16 index)
             {
-                return this->_data[index];
+                return this->m_data[index];
             }
             //////////////////////////////////////////////////////////
             
             template <UInt16 Index = 0u>
-            MV_API Type get() const
+            inline MV_API const Type& get() const
             {
                 static_assert(Index < Size, "Invalid Index for VektorImpl.get<>()");
-                return std::get<Index>(this->_data);
+                return std::get<Index>(this->m_data);
             }
             
             
@@ -320,7 +332,7 @@ namespace mv
             {
                 for (UInt16 i = 0u; i < Size; ++i)
                 {
-                    this->_data[i] += rhs._data[i];
+                    this->m_data[i] += rhs.m_data[i];
                 }
                 return *this;
             }
@@ -337,13 +349,31 @@ namespace mv
             {
                 for (UInt16 i = 0u; i < Size; ++i)
                 {
-                    this->_data[i] -= rhs._data[i];
+                    this->m_data[i] -= rhs.m_data[i];
                 }
                 return *this;
             }
             MV_API friend VektorImpl operator-(VektorImpl lhs, const VektorImpl& rhs)
             {
                 lhs -= rhs;
+                return lhs;
+            }
+            //////////////////////////////////////////////////////////
+
+
+            //Divide
+            MV_API VektorImpl& operator/=(const VektorImpl& rhs)
+            {
+                for (UInt16 i = 0u; i < Size; ++i)
+                {
+                    MV_ASSERT(!math::Epsilon(rhs.m_data[i]), "Vektor /= near zero");
+                    this->m_data[i] /= rhs.m_data[i];
+                }
+                return *this;
+            }
+            MV_API friend VektorImpl operator/(VektorImpl lhs, const VektorImpl& rhs)
+            {
+                lhs /= rhs;
                 return lhs;
             }
             //////////////////////////////////////////////////////////
@@ -354,7 +384,7 @@ namespace mv
             {
                 for (UInt16 i = 0u; i < Size; ++i)
                 {
-                    if (lhs._data[i] >= rhs._data[i])
+                    if (lhs.m_data[i] >= rhs.m_data[i])
                     {
                         return false;
                     }
@@ -393,7 +423,7 @@ namespace mv
             {
                 for(UInt16 i = 0u; i < Size; ++i)
                 {
-                    if (lhs._data[i] != rhs._data[i])
+                    if (lhs.m_data[i] != rhs.m_data[i])
                     {
                         return false;
                     }
@@ -412,6 +442,8 @@ namespace mv
             
             
         }; //VektorImpl<UInt16, Size, Type> : VektorImplData
+
+        #undef MV_VEKTORDATA_CTORS
         
     } // detail
     
@@ -425,8 +457,5 @@ namespace mv
     #endif
     
 } // mv
-
-#undef MV_VEKTOR_CTORS
-#undef MV_VEKTORDATA_CTORS
 
 #endif // MV_VEKTOR_HPP

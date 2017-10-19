@@ -307,10 +307,51 @@ static MV_API Vektor<Size, Type> Project(const Vektor<Size, Type>& a, const Vekt
 }
 //////////////////////////////////////////////////////////
 
+#if !MV_CONSTEXPR
 
-template <UInt8 NewSize, typename Type, UInt8 OldSize>
+namespace detail
+{
+    template <UInt16 NewSize>
+    struct ResizeVektorHelper final
+    {
+        template <typename Type, UInt16 OldSize, typename std::enable_if<(NewSize == OldSize)>::type* = nullptr>
+        static Vektor<NewSize, Type> ResizeVektor(const Vektor<OldSize, Type>& v)
+        {
+            return v;
+        }
+        template <typename Type, UInt16 OldSize, typename std::enable_if<(NewSize < OldSize)>::type* = nullptr>
+        static Vektor<NewSize, Type> ResizeVektor(const Vektor<OldSize, Type>& v)
+        {
+            std::array<Type, NewSize> arr;
+            for (UInt16 i = 0u; i < NewSize; ++i)
+            {
+                arr[i] = v[i];
+            }
+            return Vektor<NewSize, Type>(arr);
+        }
+        template <typename Type, UInt16 OldSize, typename std::enable_if<(NewSize > OldSize)>::type* = nullptr>
+        static Vektor<NewSize, Type> ResizeVektor(const Vektor<OldSize, Type>& v)
+        {
+            std::array<Type, NewSize> arr;
+            for (UInt16 i = 0u; i < OldSize; ++i)
+            {
+                arr[i] = v[i];
+            }
+            for (UInt16 i = OldSize; i < NewSize; ++i)
+            {
+                arr[i] = static_cast<Type>(0);
+            }
+            return Vektor<NewSize, Type>(arr);
+        }
+    };
+}
+
+#endif // !MV_CONSTEXPR
+
+template <UInt16 NewSize, typename Type, UInt16 OldSize>
 static MV_API Vektor<NewSize, Type> ResizeVektor(const Vektor<OldSize, Type>& v)
 {
+    #if MV_CONSTEXPR
     if MV_API (NewSize == OldSize)
     {
         return v;
@@ -337,6 +378,9 @@ static MV_API Vektor<NewSize, Type> ResizeVektor(const Vektor<OldSize, Type>& v)
         }
         return Vektor<NewSize, Type>(arr);
     }
+    #else
+        return detail::ResizeVektorHelper<NewSize>::ResizeVektor(v);
+    #endif
 }
 
 

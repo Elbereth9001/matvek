@@ -27,4 +27,10 @@ file(GLOB mvlibfiles
 
 add_library(matveklib INTERFACE)
 
-target_include_directories(matveklib INTERFACE mvlibfiles)
+target_compile_options(matveklib INTERFACE )
+
+if(MSVC)
+    target_include_directories(matveklib INTERFACE mvlibfiles /Wall)
+else()
+    target_include_directories(matveklib INTERFACE mvlibfiles -W -Wall)
+endif()

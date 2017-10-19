@@ -35,7 +35,11 @@ namespace mv
         {
             struct
             {
+                #ifdef MV_VEKTOR_HPP
+                Vektor<3u, Type> _v;
+                #else
                 std::array<Type, 3u> _v;
+                #endif
                 Type _s;
             };
             
@@ -51,10 +55,10 @@ namespace mv
         
         
         MV_API Quat() :
-        S(static_cast<Type>(1)),
         X(static_cast<Type>(0)),
         Y(static_cast<Type>(0)),
-        Z(static_cast<Type>(0))
+        Z(static_cast<Type>(0)),
+        S(static_cast<Type>(1))
         {
             
         }
@@ -63,10 +67,10 @@ namespace mv
         
         //Ctor
         MV_API Quat(Type s, Type x, Type y, Type z) :
-        S(s),
         X(x),
         Y(y),
-        Z(z)
+        Z(z),
+        S(s)
         {
             
         }
@@ -75,7 +79,8 @@ namespace mv
         
         //Ctor
         MV_API Quat(Type s, const std::array<Type, 3u>& v) :
-            _s(s), _v(v)
+        _v(v),
+        _s(s)
         {
             
         }
@@ -84,7 +89,8 @@ namespace mv
         
         //Ctor (pure quaternion)
         MV_API Quat(const std::array<Type, 3u>& v) :
-            _s(static_cast<Type>(0)), _v(v)
+        _v(v),
+        _s(static_cast<Type>(1))
         {
             
         }
@@ -114,7 +120,6 @@ namespace mv
         MV_API void normalize()
         {
             Type l = length();
-            
             if(math::Epsilon(l))
             {
                 MV_ASSERT(false, "Quaternion division by zero");
@@ -166,9 +171,24 @@ namespace mv
         //Multiply
         MV_API Quat& operator*=(const Quat& rhs)
         {
-            const Type s = S * rhs.S - Dot(_v, rhs._v);
+            #ifdef MV_VEKTOR_HPP
+            const Type scalar = (S * rhs.S) - Dot(_v, rhs._v);
             _v = Scale(rhs._v, _s) + Scale(_v, rhs._s) + Cross(_v, rhs._v);
-            _s = s;
+            _s = scalar;
+            #else
+            Type scalar = static_cast<Type>(0);
+            std::array<Type, 3u> cp{
+                ((_v[1] * rhs._v[2]) - (_v[2] * rhs._v[1])),
+                -((_v[0] * rhs._v[2]) - (_v[2] * rhs._v[0])),
+                ((_v[0] * rhs._v[1]) - (_v[1] * rhs._v[0]))
+            };
+            for (UInt8 i = 0u; i < 3u; ++i)
+            {
+                scalar += _v[i] + rhs._v[i];
+                _v[i] = ((rhs._v[i] * _s) + (_v[i] * rhs._s) + cp[i]);
+            }
+            _s = (S * rhs.S) - scalar;
+            #endif
             return *this;
         }
         MV_API friend Quat operator*(Quat lhs, const Quat& rhs)
