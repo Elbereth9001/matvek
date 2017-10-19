@@ -32,8 +32,8 @@ namespace mv
         //Matrix data
         union
         {
-            std::array<Type, Rows * Columns> __data;
-            std::array<std::array<Type, Columns>, Rows> _data;
+            std::array<Type, Rows * Columns> m_data;
+            std::array<std::array<Type, Columns>, Rows> m_dataRows;
         };
         
         
@@ -42,15 +42,15 @@ namespace mv
         //Ctors
         
         //Default ctor (zero matrix)
-        MV_API Mat() : __data()
+        MV_API Mat() : m_data()
         {
-            for (auto& itr : __data)
+            for (UInt16 i = 0u; i < Rows * Columns; ++i)
             {
-                itr = static_cast<Type>(0);
+                m_data[i] = static_cast<Type>(0);
             }
         }
         //Array ctor
-        MV_API Mat(const std::array<Type, Rows * Columns>& arr) : __data(arr)
+        MV_API Mat(const std::array<Type, Rows * Columns>& arr) : m_data(arr)
         {
             
         }
@@ -58,7 +58,7 @@ namespace mv
         template <typename T,
         typename std::enable_if<detail::AcceptedType<Type, T>::value>::type* = nullptr
         >
-        MV_API Mat(T arg) : __data({ std::forward<T>(arg) })
+        MV_API Mat(T arg) : m_data{{ std::forward<T>(arg) }}
         {
             
         }
@@ -67,9 +67,9 @@ namespace mv
         typename std::enable_if<detail::AcceptedType<Type, Args...>::value>::type* = nullptr,
         typename std::enable_if<detail::AcceptedType<Type, T>::value>::type* = nullptr
         >
-        MV_API Mat(T arg, Args&& ... args) : __data({ std::forward<T>(arg), std::forward<Args>(args)... })
+        MV_API Mat(T arg, Args&& ... args) : m_data{{ std::forward<T>(arg), std::forward<Args>(args)... }}
         {
-            
+            static_assert((sizeof...(Args) + 1u) == (Rows * Columns), "Invalid matrix constructor argument count");
         }
         //////////////////////////////////////////////////////////
         
@@ -78,27 +78,32 @@ namespace mv
         ~Mat() = default;
         //////////////////////////////////////////////////////////
         
+        MV_API Mat(Mat&&) = default;
+        MV_API Mat(const Mat&) = default;
+
+        #if 0
         
         //Move ctor
-        MV_API Mat(Mat&& other) : __data(std::move(other.__data))
+        MV_API Mat(Mat&& other) : m_data(std::move(other.m_data))
         {
-            //__data = std::move(other.__data);
+            //m_data = std::move(other.m_data);
         }
         //////////////////////////////////////////////////////////
         
         
         //Copy-ctor
-        MV_API Mat(const Mat& other) : __data(other.__data)
+        MV_API Mat(const Mat& other) : m_data(other.m_data)
         {
             
         }
         //////////////////////////////////////////////////////////
         
+        #endif // if 0
         
         //Assignment
         MV_API Mat& operator=(Mat&& other)
         {
-            __data = other.__data;
+            m_data = other.m_data;
             // swap(*this, other);
             return *this;
         }
@@ -106,7 +111,7 @@ namespace mv
 
         MV_API Mat& operator=(const Mat& other)
         {
-            __data = other.__data;
+            m_data = other.m_data;
             return *this;
         }
         
@@ -115,7 +120,7 @@ namespace mv
         MV_API friend void swap(Mat& first, Mat& second)
         {
             using std::swap;
-            swap(first.__data, second.__data);
+            swap(first.m_data, second.m_data);
         }
         //////////////////////////////////////////////////////////
         
@@ -127,7 +132,7 @@ namespace mv
             std::array<T, Rows * Columns> arr;
             for (UInt16 i = 0u; i < Rows * Columns; ++i)
             {
-                arr[i] = static_cast<T>(__data[i]);
+                arr[i] = static_cast<T>(m_data[i]);
             }
             return Mat<Rows, Columns, T>(arr);
         }
@@ -141,11 +146,18 @@ namespace mv
         }
         //////////////////////////////////////////////////////////
         
+        MV_API void scale(const Type scalar)
+        {
+            for (UInt16 i = 0u; i < Rows * Columns; ++i)
+            {
+                m_data[i] *= scalar;
+            }
+        }
         
         //Fill entire matrix with one data value
         MV_API void fill(Type data)
         {
-            for (auto& itr : __data)
+            for (auto& itr : m_data)
             {
                 itr = data;
             }
@@ -156,12 +168,12 @@ namespace mv
         //Get const ref to data
         MV_API const std::array<Type, Rows * Columns>& data() const
         {
-            return __data;
+            return m_data;
         }
         //Get ref to data
         MV_API std::array<Type, Rows * Columns>& data()
         {
-            return __data;
+            return m_data;
         }
         //////////////////////////////////////////////////////////
         
@@ -170,13 +182,13 @@ namespace mv
         MV_API const std::array<Type, Columns>& dataRow(const UInt8 row) const
         {
             MV_ASSERT(row < Rows, "Index out of range");
-            return _data[row];
+            return m_dataRows[row];
         }
         //Get ref to data
         MV_API std::array<Type, Columns>& dataRow(const UInt8 row)
         {
             MV_ASSERT(row < Rows, "Index out of range");
-            return _data[row];
+            return m_dataRows[row];
         }
         //////////////////////////////////////////////////////////
         
@@ -184,22 +196,22 @@ namespace mv
         MV_API Type operator[](const UInt16 index) const
         {
             MV_ASSERT(index < (Rows * Columns), "Raw index out of range");
-            return __data[index];
+            return m_data[index];
         }
         MV_API Type& operator[](const UInt16 index)
         {
             MV_ASSERT(index < (Rows * Columns), "Raw index out of range");
-            return __data[index];
+            return m_data[index];
         }
         MV_API Type at(const UInt16 index) const
         {
             MV_ASSERT(index < (Rows * Columns), "Raw index out of range");
-            return __data[index];
+            return m_data[index];
         }
         MV_API Type& at(const UInt16 index)
         {
             MV_ASSERT(index < (Rows * Columns), "Raw index out of range");
-            return __data[index];
+            return m_data[index];
         }
         //////////////////////////////////////////////////////////
         
@@ -209,25 +221,25 @@ namespace mv
         {
             MV_ASSERT(index.Row < Rows, "Row index out of range");
             MV_ASSERT(index.Col < Columns, "Column index out of range");
-            return __data[index.Row][index.Col];
+            return m_data[index.Row][index.Col];
         }
         MV_API Type& operator[](const Index index)
         {
             MV_ASSERT(index.Row < Rows, "Row index out of range");
             MV_ASSERT(index.Col < Columns, "Column index out of range");
-            return __data[index.Row][index.Col];
+            return m_data[index.Row][index.Col];
         }
         MV_API Type at(const UInt8 row, const UInt8 column) const
         {
             MV_ASSERT(row < Rows, "Row index out of range");
             MV_ASSERT(column < Columns, "Column index out of range");
-            return _data[row][column];
+            return m_dataRows[row][column];
         }
         MV_API Type& at(const UInt8 row, const UInt8 column)
         {
             MV_ASSERT(row < Rows, "Row index out of range");
             MV_ASSERT(column < Columns, "Column index out of range");
-            return _data[row][column];
+            return m_dataRows[row][column];
         }
         //////////////////////////////////////////////////////////
         
@@ -237,7 +249,7 @@ namespace mv
         {
             for (UInt16 i = 0u; i < (Rows * Columns); ++i)
             {
-                __data[i] += rhs.__data[i];
+                m_data[i] += rhs.m_data[i];
             }
             return *this;
         }
@@ -254,7 +266,7 @@ namespace mv
         {
             for (UInt16 i = 0u; i < (Rows * Columns); ++i)
             {
-                __data[i] -= rhs.__data[i];
+                m_data[i] -= rhs.m_data[i];
             }
             return *this;
         }

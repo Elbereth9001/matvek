@@ -20,40 +20,23 @@
 #ifndef MV_MF_HPP
 #define MV_MF_HPP
 
-#if MV_CONSTEXPR
+
+
+#if !MV_CONSTEXPR
 
 namespace detail
 {
-    template <
-    UInt8, UInt8,
-    typename,
-    UInt8, UInt8
-    >
-    struct ResizeMatrixHelper final { };
-    
-    template <
-    UInt8 NewRows, UInt8 NewCols,
-    typename Type,
-    UInt8 OldRows, UInt8 OldCols,
-    typename std::enable_if<NewRows == OldRows>::type* = nullptr
-    >
+    template <UInt8 NewRows, UInt8 NewCols>
     struct ResizeMatrixHelper final
     {
+        // Same size
+        template <typename Type, UInt8 OldRows, UInt8 OldCols, typename std::enable_if<(NewRows == OldRows)>::type* = nullptr>
         static Mat<NewRows, NewCols, Type> ResizeMatrix(const Mat<OldRows, OldCols, Type>& m)
         {
             return m;
         }
-    };
-    
-    // Square smaller
-    template <
-    UInt8 NewRows, UInt8 NewCols,
-    typename Type,
-    UInt8 OldRows, UInt8 OldCols,
-    typename std::enable_if<NewRows < OldRows>::type* = nullptr
-    >
-    struct ResizeMatrixHelper final
-    {
+        // Square smaller
+        template <typename Type, UInt8 OldRows, UInt8 OldCols, typename std::enable_if<(NewRows < OldRows)>::type* = nullptr>
         static Mat<NewRows, NewCols, Type> ResizeMatrix(const Mat<OldRows, OldCols, Type>& m)
         {
             std::array<Type, NewRows * NewCols> arr{};
@@ -66,18 +49,8 @@ namespace detail
             }
             return Mat<NewRows, NewCols, Type>(arr);
         }
-    };
-    
-    
-    // Square larger
-    template <
-    UInt8 NewRows, UInt8 NewCols,
-    typename Type,
-    UInt8 OldRows, UInt8 OldCols,
-    typename std::enable_if<NewRows > OldRows>::type* = nullptr
-    >
-    struct ResizeMatrixHelper final
-    {
+        // Square larger
+        template <typename Type, UInt8 OldRows, UInt8 OldCols, typename std::enable_if<(NewRows > OldRows)>::type* = nullptr>
         static Mat<NewRows, NewCols, Type> ResizeMatrix(const Mat<OldRows, OldCols, Type>& m)
         {
             std::array<Type, NewRows * NewCols> arr;
@@ -95,17 +68,11 @@ namespace detail
             return Mat<NewRows, NewCols, Type>(arr);
         }
     };
-    
 } // detail
 
 #endif // MV_CONSTEXPR
 
-template <
-UInt8 NewRows, UInt8 NewCols,
-typename Type,
-UInt8 OldRows, UInt8 OldCols,
-typename std::enable_if<OldRows != NewRows && OldCols != NewCols>::type* = nullptr
->
+template <UInt8 NewRows, UInt8 NewCols, typename Type, UInt8 OldRows, UInt8 OldCols>
 static MV_API Mat<NewRows, NewCols, Type> ResizeMatrix(const Mat<OldRows, OldCols, Type>& m)
 {
     static_assert(
@@ -153,15 +120,10 @@ static MV_API Mat<NewRows, NewCols, Type> ResizeMatrix(const Mat<OldRows, OldCol
     }
     // TODO: non-square matrices
     #else
-    ResizeMatrixHelper<NewRows, NewCols>(m);
+        return detail::ResizeMatrixHelper<NewRows, NewCols>::ResizeMatrix(m);
     #endif
 }
 
-template <UInt8 NewRows, UInt8 NewCols, bool, typename Type>
-static MV_API Mat<NewRows, NewCols, Type> ResizeMatrix(const Mat<NewRows, NewCols, Type>& m)
-{
-    return m;
-}
 
 namespace detail
 {
@@ -341,6 +303,16 @@ static MV_API Mat<Rows, Columns, Type> MakeDiagonal(Args&& ... args)
 //////////////////////////////////////////////////////////
 
 
+template <UInt8 Rows, UInt8 Cols, typename Type, typename ... Args>
+static MV_API Mat<Rows, Cols, Type> MakeMatrix(Args ... args)
+{
+    static_assert(Rows != 0u || Cols != 0u, "MakeMatrix: Cannot create matrix with dimension size 0");
+    static_assert(sizeof...(Args) == (Rows * Cols), "MakeMatrix: Argument count does not match Rows * Columns");
+    return Mat<Rows, Cols, Type>(static_cast<Type>(args)...);
+}
+//////////////////////////////////////////////////////////
+
+
 template <typename Type>
 static MV_API Mat<4u, 4u, Type> MakeOrtographic(
     const Type left,
@@ -451,6 +423,40 @@ static MV_API Mat<Rows, Cols, Type> Multiply(Mat<Rows, Cols, Type> copy, const T
     return copy;
 }
 //////////////////////////////////////////////////////////
+
+template <typename Type, UInt8 RowsA, UInt8 ColsARowsB, UInt8 ColsB>
+MV_API Mat<RowsA, ColsB, Type> operator*(
+    const Mat<RowsA, ColsARowsB, Type>& matA,
+    const Mat<ColsARowsB, ColsB, Type>& matB
+)
+{
+    Mat<RowsA, ColsB, Type> m;
+    for (UInt8 iRow = 0u; iRow < RowsA; ++iRow)
+    {
+        for (UInt8 iCol = 0u; iCol < ColsB; ++iCol)
+        {
+            for (UInt8 restARow = 0u; restARow < ColsARowsB; ++restARow)
+            {
+                m.at(iRow, iCol) += matA.at(iRow, restARow) * matB.at(restARow, iCol);
+            }
+        }
+    }
+    return m;
+}
+
+template <UInt8 Rows, UInt8 Cols, typename Type>
+MV_API Mat<Rows, Cols, Type> operator*(Mat<Rows, Cols, Type> m, const Type scalar)
+{
+    m.scale(scalar);
+    return m;
+}
+
+template <UInt8 Rows, UInt8 Cols, typename Type>
+MV_API Mat<Rows, Cols, Type>& operator*=(Mat<Rows, Cols, Type>& m, const Type scalar)
+{
+    m.scale(scalar);
+    return m;
+}
 
 
 #if MV_DEBUG

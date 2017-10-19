@@ -86,6 +86,15 @@ static MV_API Vektor<Size, Type> Copy(const Vektor<Size, Type>& v)
 //////////////////////////////////////////////////////////
 
 
+//Returns cross product of two vektors (only applicable on vektors with a size of 2)
+template <typename Type>
+static MV_API Type Cross(const Vektor<2u, Type>& v1, const Vektor<2u, Type>& v2)
+{
+    return (v1.x * v2.y) - (v1.y * v2.x);
+}
+//////////////////////////////////////////////////////////
+
+
 //Returns cross product of two vektors (only applicable on vektors with a size of 3)
 template <typename Type>
 static MV_API Vektor<3u, Type> Cross(const Vektor<3u, Type>& v1, const Vektor<3u, Type>& v2)
@@ -231,6 +240,16 @@ static MV_API Vektor<3u, Type> MakeOrthoNormal(Vektor<3u, Type>& a, Vektor<3u, T
     c.normalize();
     b = Cross(c, a);
     return c;
+}
+//////////////////////////////////////////////////////////
+
+
+template <UInt16 Size, typename Type, typename ... Args>
+static MV_API Vektor<Size, Type> MakeVektor(Args ... args)
+{
+    static_assert(Size != 0u, "MakeVektor: Cannot create vektor with dimension 0");
+    static_assert(sizeof...(Args) == Size, "MakeVektor: Argument count does not match Size");
+    return Vektor<Size, Type>(static_cast<Type>(args)...);
 }
 //////////////////////////////////////////////////////////
 

@@ -387,6 +387,25 @@ static MV_API Mat<1u, Cols, Type> Multiply(const Vektor<Size, Type>& v, const Ma
 }
 //////////////////////////////////////////////////////////
 
+//Multiply matrix and vektor
+template <UInt8 Rows, UInt8 Cols, typename Type,  UInt16 Size>
+static MV_API Mat<Rows, 1u, Type> operator*(const Mat<Rows, Cols, Type>& m, const Vektor<Size, Type>& v)
+{
+    static_assert(Cols == Size, "Matrix size mismatch");
+    return m * ToMatrix<Rows, 1u>(v);
+}
+//////////////////////////////////////////////////////////
+
+
+//Multiply vektor and matrix
+template <UInt8 Rows, UInt8 Cols, typename Type, UInt16 Size>
+static MV_API Mat<1u, Cols, Type> operator*(const Vektor<Size, Type>& v, const Mat<Rows, Cols, Type>& m)
+{
+    static_assert(Rows == Size, "Matrix size mismatch");
+    return ToMatrix<1u, Rows>(v) * m;
+}
+//////////////////////////////////////////////////////////
+
 
 //v = axis
 template <typename Type>

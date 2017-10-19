@@ -26,30 +26,29 @@
 //#include <cstdlib>
 #include <type_traits>
 
-#if defined(MV_DEBUG)
-#include <iostream>
-#include <string>
-#include <sstream>
+#if MV_DEBUG
+    #include <iostream>
+    #include <string>
+    #include <sstream>
 #endif
 
 #if MV_CONSTEXPR
-#define MV_API constexpr
+    #define MV_API constexpr
 #else
-#define MV_API
+    #define MV_API  
 #endif
 
 #define MV_DISABLE_CLASS(name) \
-name() = delete; \
-~name() = delete; \
-name(name&&) = delete; \
-name(const name&) = delete; \
-name& operator=(name&&) = delete; \
-name& operator=(const name&) = delete;
+    name() = delete; \
+    ~name() = delete; \
+    name(name&&) = delete; \
+    name(const name&) = delete; \
+    name& operator=(name&&) = delete; \
+    name& operator=(const name&) = delete;
 
 namespace mv
 {
-    #if defined(MV_DEBUG)
-    
+#if MV_DEBUG
     namespace detail
     {
         template <typename MsgType>
@@ -81,7 +80,7 @@ namespace mv
             {
                 _msg(message);
                 #if _WIN32
-                __debugbreak();
+                    __debugbreak();
                 #endif
                 std::exit(EXIT_FAILURE);
             }
@@ -89,12 +88,9 @@ namespace mv
     } //detail
     
     #define MV_ASSERT(expression, message) ::mv::detail::assertion(expression, message)
-    #else
+#else // MV_DEBUG
     #define MV_ASSERT(expression, message)
-    
-    template <typename ... Ms>
-    static void _msg(const Ms& ...) {}
-    #endif
+#endif // MV_DEBUG
     
     
     using Int8 = signed char;

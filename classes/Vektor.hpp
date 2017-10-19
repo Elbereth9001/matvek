@@ -30,20 +30,9 @@ MV_API className() : paramName() { for (UInt16 i = 0u; i < Size; ++i) this->para
 /* Array ctor */ \
 MV_API className(const std::array<Type, Size>& data) : paramName(data) {} \
 template <typename T> /* Single argument ctor */ \
-MV_API className(T arg) : paramName({ std::forward<T>(arg) }) {} \
+MV_API className(T arg) : paramName{{ std::forward<T>(arg) }} {} \
 template <typename T, typename ... Args> /* Variadic ctor */ \
-MV_API className(T arg, Args&& ... args) : paramName({ std::forward<T>(arg), std::forward<Args>(args)... }) {}
-
-
-#define MV_VEKTOR_CTORS(className, paramName, Type, Size) \
-/* Default ctor (zero vektor) */ \
-MV_API className() : paramName() {} \
-/* Array ctor */ \
-MV_API className(const std::array<Type, Size>& data) : paramName(data) {} \
-template <typename T> /* Single argument ctor */ \
-MV_API className(T arg) : paramName(std::forward<T>(arg)) {} \
-template <typename T, typename ... Args> /* Variadic ctor */ \
-MV_API className(T arg, Args&& ... args) : paramName(std::forward<T>(arg), std::forward<Args>(args)... ) {}
+MV_API className(T arg, Args&& ... args) : paramName{{ std::forward<T>(arg), std::forward<Args>(args)... }} {}
 
 namespace mv
 {
@@ -126,7 +115,19 @@ namespace mv
             
         public:
             
-            MV_VEKTOR_CTORS(VektorImpl, VData, Type, Size);
+            // Default ctor (zero vektor)
+            MV_API VektorImpl() : VData() {}
+            // Array ctor
+            MV_API VektorImpl(const std::array<Type, Size>& data) : VData(data) {}
+            // Single argument ctor
+            template <typename T>
+            MV_API VektorImpl(T arg) : VData(std::forward<T>(arg)) {}
+            // Variadic ctor
+            template <typename T, typename ... Args>
+            MV_API VektorImpl(T arg, Args&& ... args) : VData(std::forward<T>(arg), std::forward<Args>(args)... )
+            {
+                static_assert(sizeof...(Args) == (Size - 1u), "Invalid vektor constructor argument count");
+            }
             
             
             //Type conversion
