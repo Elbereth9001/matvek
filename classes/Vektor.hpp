@@ -156,6 +156,7 @@ namespace mv
             //////////////////////////////////////////////////////////
             
             
+            // Retrieve a pointer to the underlying data
             MV_API const Type* array() const
             {
                 return this->m_data.data();
@@ -219,6 +220,7 @@ namespace mv
             }
             
             
+            // Retrieve length of the vektor
             MV_API Type length() const
             {
                 return math::Sqrt(lengthSquared());
@@ -226,6 +228,7 @@ namespace mv
             //////////////////////////////////////////////////////////
             
             
+            // Retrieve squared length of the vektor
             MV_API Type lengthSquared() const
             {
                 Type l = static_cast<Type>(0);
@@ -238,6 +241,7 @@ namespace mv
             //////////////////////////////////////////////////////////
             
             
+            // Normalize the vektor
             MV_API void normalize()
             {
                 Type l = length();
@@ -255,6 +259,7 @@ namespace mv
             //////////////////////////////////////////////////////////
             
             
+            // Change sign on all elements
             MV_API void invert()
             {
                 static_assert(std::numeric_limits<Type>::is_signed, "Tried to call VektorImpl reversal with unsigned type");
@@ -266,6 +271,7 @@ namespace mv
             //////////////////////////////////////////////////////////
             
             
+            // Scale all elements by another element
             MV_API void scale(const VektorImpl& v)
             {
                 for (UInt16 i = 0u; i < Size; ++i)
@@ -276,6 +282,7 @@ namespace mv
             //////////////////////////////////////////////////////////
             
             
+            // Scale all elements by scalar
             MV_API void scale(const Type s)
             {
                 for (UInt16 i = 0u; i < Size; ++i)
@@ -286,7 +293,7 @@ namespace mv
             //////////////////////////////////////////////////////////
             
             
-            //Returns the number of elements
+            // Returns the number of elements
             MV_API UInt16 size() const
             {
                 return Size;
@@ -319,12 +326,15 @@ namespace mv
             }
             //////////////////////////////////////////////////////////
             
+
+            // Compile-time get from index
             template <UInt16 Index = 0u>
             inline MV_API const Type& get() const
             {
                 static_assert(Index < Size, "Invalid Index for VektorImpl.get<>()");
                 return std::get<Index>(this->m_data);
             }
+            //////////////////////////////////////////////////////////
             
             
             //Increment
@@ -356,6 +366,23 @@ namespace mv
             MV_API friend VektorImpl operator-(VektorImpl lhs, const VektorImpl& rhs)
             {
                 lhs -= rhs;
+                return lhs;
+            }
+            //////////////////////////////////////////////////////////
+
+
+            // Multiply
+            MV_API VektorImpl& operator*=(const Type& rhs)
+            {
+                for (UInt16 i = 0u; i < Size; ++i)
+                {
+                    this->m_data[i] *= rhs;
+                }
+                return *this;
+            }
+            MV_API friend VektorImpl operator*(VektorImpl lhs, const Type& rhs)
+            {
+                lhs *= rhs;
                 return lhs;
             }
             //////////////////////////////////////////////////////////
