@@ -113,7 +113,7 @@ namespace mv
             using VData = detail::VektorData<Size, Type>;
             
         public:
-
+            
             static_assert(Size != 0u, "Cannot create a vektor of dimension 0");
             
             // Default ctor (zero vektor)
@@ -326,7 +326,7 @@ namespace mv
             }
             //////////////////////////////////////////////////////////
             
-
+            
             // Compile-time get from index
             template <UInt16 Index = 0u>
             inline MV_API const Type& get() const
@@ -369,9 +369,9 @@ namespace mv
                 return lhs;
             }
             //////////////////////////////////////////////////////////
-
-
-            // Multiply
+            
+            
+            // Scale
             MV_API VektorImpl& operator*=(const Type& rhs)
             {
                 for (UInt16 i = 0u; i < Size; ++i)
@@ -386,14 +386,32 @@ namespace mv
                 return lhs;
             }
             //////////////////////////////////////////////////////////
-
-
-            //Divide
+            
+            
+            // Division
+            MV_API VektorImpl& operator/=(const Type& rhs)
+            {
+                MV_ASSERT(!math::Epsilon(rhs), "Vektor scalar division near zero");
+                for (UInt16 i = 0u; i < Size; ++i)
+                {
+                    this->m_data[i] /= rhs;
+                }
+                return *this;
+            }
+            MV_API friend VektorImpl operator/(VektorImpl lhs, const Type& rhs)
+            {
+                lhs /= rhs;
+                return lhs;
+            }
+            //////////////////////////////////////////////////////////
+            
+            
+            // Element-wise division
             MV_API VektorImpl& operator/=(const VektorImpl& rhs)
             {
                 for (UInt16 i = 0u; i < Size; ++i)
                 {
-                    MV_ASSERT(!math::Epsilon(rhs.m_data[i]), "Vektor /= near zero");
+                    MV_ASSERT(!math::Epsilon(rhs.m_data[i]), "Vektor element-wise division near zero");
                     this->m_data[i] /= rhs.m_data[i];
                 }
                 return *this;
@@ -469,7 +487,7 @@ namespace mv
             
             
         }; //VektorImpl<UInt16, Size, Type> : VektorImplData
-
+        
         #undef MV_VEKTORDATA_CTORS
         
     } // detail
